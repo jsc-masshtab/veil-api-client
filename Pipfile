@@ -1,0 +1,26 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+flake8 = "==3.7.9"
+flake8-builtins = "==1.5.2"
+flake8-bugbear = "==19.8.0"
+flake8-import-order= "==0.18.1"
+flake8-docstrings = "==1.5.0"
+flake8-quotes = "==3.0.0"
+coverage = "==5.1"
+pytest = "*"
+pytest-flake8 = "*"
+pytest-cov = "*"
+uvloop = "==0.14.0"
+setuptools = "*"
+wheel = "*"
+
+[packages]
+aiohttp = "==3.6.2"
+#aiohttp-retry = "==1.0.*"
+#
+#[requires]
+#python_version = "3.5"

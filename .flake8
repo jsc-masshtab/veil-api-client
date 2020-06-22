@@ -4,5 +4,12 @@ inline-quotes = single
 ignore =
     # E501 line too long
     E501,
+    # Missing docstring
+    D101,
+    D102,
+    D103,
+    D104,
+    D105,
+    D107,
 
-exclude = .git,__pycache__,tests/
+exclude = .git, __pycache__, tests/, venv/, env/

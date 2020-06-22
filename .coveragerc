@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+# https://coverage.readthedocs.io/en/latest/config.html#run
+# .coveragerc to control coverage.py
+
+[report]
+include =
+    veil_api_client/*
+
+omit =
+    tests/*
+
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+[html]
+directory = tests/htmlcov
