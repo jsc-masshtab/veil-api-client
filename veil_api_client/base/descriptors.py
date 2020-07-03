@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Utilities."""
+import functools
+import inspect
 import re
 from uuid import UUID
 
@@ -40,6 +42,14 @@ class BoolType(TypeChecker):
         super().__init__(name, bool)
 
 
+class IntType(TypeChecker):
+    """Descriptor for int checking."""
+
+    def __init__(self, name):
+        """Use 'int' for TypeChecker value_type."""
+        super().__init__(name, int)
+
+
 class DictType(TypeChecker):
     """Descriptor for dict checking."""
 
@@ -70,12 +80,25 @@ class NullableStringType(StringType):
             raise TypeError('{val} is not a {val_type}'.format(val=value, val_type=self.value_type))
 
 
+class NullableIntType(IntType):
+    """Descriptor for nullable int checking."""
+
+    def __set__(self, instance, value):
+        """Check that attribute value type equals value_type."""
+        if isinstance(value, self.value_type) or value is None:
+            instance.__dict__[self.name] = value
+        else:
+            raise TypeError('{val} is not a {val_type}'.format(val=value, val_type=self.value_type))
+
+
 class VeilJwtTokenType(StringType):
     """JWT Token is a string begins with 'jwt '."""
 
+    __TOKEN_PREFIX = re.compile('jwt ', re.I)
+
     def __set__(self, instance, value):
-        """Check that attribute value type equals value_type and starts with 'jwt '."""
-        if isinstance(value, self.value_type) and value.startswith('jwt '):
+        """Check that attribute value type equals value_type and starts with 'jwt ' or 'JWT '."""
+        if isinstance(value, self.value_type) and self.__TOKEN_PREFIX.match(value):
             instance.__dict__[self.name] = value
         else:
             raise TypeError('{val} is not a proper VeiL jwt-token.'.format(val=value))
@@ -89,7 +112,7 @@ class UuidStringType(NullableStringType):
         try:
             if value:
                 UUID(value)
-        except ValueError:
+        except (ValueError, AttributeError):
             raise TypeError('{val} is not a uuid string.'.format(val=value))
         else:
             super().__set__(instance, value)
@@ -111,3 +134,28 @@ class VeilUrlStringType(StringType):
             instance.__dict__[self.name] = value
         else:
             raise TypeError('{val} is not a proper VeiL server url.'.format(val=value))
+
+
+def argument_type_checker_decorator(func):
+    """Compare function argument type annotations with value types."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        arguments = inspect.getfullargspec(func).args
+        annotations = func.__annotations__
+
+        if annotations:
+            for idx, arg_name in enumerate(arguments):
+                arg_annotation = annotations.get(arg_name)
+                arg_value = args[idx] if len(args) > idx else None
+                if arg_annotation and arg_value and not isinstance(arg_value, arg_annotation):
+                    raise TypeError('{arg} is not a proper {arg_type}.'.format(arg=arg_value, arg_type=arg_annotation))
+
+            for kwarg in kwargs:
+                kwarg_annotation = annotations.get(kwarg)
+                if kwarg_annotation and not isinstance(kwargs[kwarg], kwarg_annotation):
+                    raise TypeError(
+                        '{kwarg} is not a proper {arg_type}.'.format(kwarg=kwarg, arg_type=kwarg_annotation))
+
+        return func(*args, **kwargs)
+    return wrapper

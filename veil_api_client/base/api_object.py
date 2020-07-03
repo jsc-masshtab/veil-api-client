@@ -2,12 +2,54 @@
 """Base api object."""
 from uuid import UUID
 
-from .utils import UuidStringType
+from .api_client import VeilApiClient
+from .descriptors import (NullableIntType, NullableStringType,
+                          TypeChecker, UuidStringType, argument_type_checker_decorator)
+
+
+class VeilRestPaginator:
+    """ECP VeiL paginator description.
+
+    VeiL Paginator interface.
+
+    Attributes:
+        name: name value pattern.
+        ordering: Which field to use when ordering the results.
+        limit: Number of results to return per page.
+        offset: The initial index from which to return the results.
+    """
+
+    name = NullableStringType('name')
+    ordering = NullableStringType('ordering')
+    limit = NullableIntType('limit')
+    offset = NullableIntType('offset')
+
+    def __init__(self, name: str = None, ordering: str = None, limit: int = None, offset: int = None):
+        """Please see help(VeilRestPaginator) for more info."""
+        self.name = name
+        self.ordering = ordering
+        self.limit = limit
+        self.offset = offset
+
+    @property
+    def notnull_attrs(self):
+        """Return only attributes with values."""
+        return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr]}
 
 
 class VeilApiObject:
+    """Base VeiL Api Object.
+
+    Abstract class for VeiL entity description.
+
+    Attributes:
+        client: https_client instance.
+        api_object_prefix: VeiL entity url postfix (domain, cluster and etc).
+        api_object_id: VeiL entity id(uuid).
+    """
 
     api_object_id = UuidStringType('api_object_id')
+    _client = TypeChecker('_client', VeilApiClient)
 
     class __STATUS:
         """Veil api object possible statuses."""
@@ -20,6 +62,7 @@ class VeilApiObject:
         partial = 'PARTIAL'
 
     def __init__(self, client, api_object_prefix: str, api_object_id: str = None):
+        """Please see help(VeilApiObject) for more info."""
         self.__api_object_prefix = api_object_prefix
         self._client = client
         self.api_object_id = api_object_id
@@ -27,7 +70,7 @@ class VeilApiObject:
         self.verbose_name = None
 
     def _update(self, attrs_dict: dict):
-        """Обновляет публичные атрибуты класса игнорируя property."""
+        """Update public class attributes ignoring property."""
         for attr in attrs_dict:
             if attr.startswith('_'):
                 continue
@@ -57,53 +100,64 @@ class VeilApiObject:
 
     @property
     def uuid_(self):
-        """Конвертирует строку с id в UUID."""
+        """Convert a string with id to UUID."""
         try:
             object_id = self.api_object_id
             if not isinstance(object_id, str):
-                object_id = str(object_id)
+                object_id = str(object_id)  # pragma: no cover
             object_uuid = UUID(object_id)
-        except (ValueError, NameError, AttributeError):
-            return
+        except (ValueError, NameError, AttributeError):  # pragma: no cover
+            # Now covered by descriptors tests.
+            return  # pragma: no cover
         return object_uuid
 
     @property
     def base_url(self):
+        """Build entity full url (without id)."""
         return ''.join([self._client.base_url, self.__api_object_prefix])
 
     @property
     def api_object_url(self):
+        """Build entity full url (with url)."""
         if not self.api_object_id:
             raise AttributeError('api_object_id is empty.')
         return self.base_url + '{}/'.format(self.api_object_id)
 
     @property
-    def creating(self):
+    def creating(self) -> bool:
+        """Entity status is __STATUS.creating."""
         return self.status == self.__STATUS.creating if self.status else False
 
     @property
-    def active(self):
+    def active(self) -> bool:
+        """Entity status is __STATUS.active."""
         return self.status == self.__STATUS.active if self.status else False
 
     @property
-    def failed(self):
+    def failed(self) -> bool:
+        """Entity status is __STATUS.failed."""
         return self.status == self.__STATUS.failed if self.status else False
 
     @property
-    def deleting(self):
+    def deleting(self) -> bool:
+        """Entity status is __STATUS.deleting."""
         return self.status == self.__STATUS.deleting if self.status else False
 
     @property
-    def service(self):
+    def service(self) -> bool:
+        """Entity status is __STATUS.service."""
         return self.status == self.__STATUS.service if self.status else False
 
     @property
-    def partial(self):
+    def partial(self) -> bool:
+        """Entity status is __STATUS.partial."""
         return self.status == self.__STATUS.partial if self.status else False
 
-    async def list(self):  # noqa
+    @argument_type_checker_decorator  # noqa
+    async def list(self, paginator: VeilRestPaginator = None):
         """List all objects of Veil api object class."""
-        return await self._client.get(self.base_url)
+        paginator = paginator.notnull_attrs if paginator else None
+        return await self._client.get(self.base_url, paginator)
 
     async def info(self):
         """Get api object instance and update public attrs."""

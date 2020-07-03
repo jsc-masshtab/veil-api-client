@@ -4,9 +4,17 @@ from ..base.api_object import VeilApiObject
 
 
 class VeilCluster(VeilApiObject):
+    """Veil cluster entity.
+
+    Attributes:
+        client: https_client instance.
+        cluster_id: VeiL cluster id(uuid).
+    """
+
     __API_OBJECT_PREFIX = 'clusters/'
 
-    def __init__(self, client, cluster_id: str = None):
+    def __init__(self, client, cluster_id: str = None) -> None:
+        """Please see help(VeilCluster) for more info."""
         super().__init__(client, api_object_id=cluster_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.cpu_count = None
         self.created = None
@@ -15,7 +23,7 @@ class VeilCluster(VeilApiObject):
         self.vdi = None
 
     async def usage(self):
-        """Получение минимальной статистики загрузки ресурсов."""
+        """Get minimum statistics of resource loading."""
         url = self.api_object_url + 'usage/'
         response = await self._client.get(url)
         return response

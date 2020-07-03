@@ -2,7 +2,14 @@
 """Common fixtures."""
 import logging
 
+from async_generator import async_generator, yield_
+
 import pytest
+
+from veil_api_client.base.api_object import VeilApiObject
+from veil_api_client.https_client import VeilClient
+
+SERVER_ADDRESS = '127.0.0.1'
 
 
 @pytest.fixture(scope='session')
@@ -28,3 +35,25 @@ def logger(temporary_log_file):
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.FileHandler(temporary_log_file))
     return logger
+
+
+@pytest.fixture(scope='session')
+def server_address():
+    """Server address for local tests."""
+    return SERVER_ADDRESS
+
+
+@pytest.fixture
+@async_generator
+async def veil_client(event_loop, server_address):
+    """Mock object with VeilClient instance."""
+    session = VeilClient(token='jwt eyJ0', server_address=server_address)
+    await yield_(session)
+    await session.close()
+
+
+@pytest.fixture
+def api_object(veil_client):
+    """Mock object with VeilApiObject instance."""
+    return VeilApiObject(client=veil_client, api_object_prefix='domain/',
+                         api_object_id='eafc39f3-ce6e-4db2-9d4e-1d93babcbe26')
