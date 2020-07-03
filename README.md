@@ -1,14 +1,11 @@
 [![Python 3.5](https://img.shields.io/badge/python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
-
-# TODO: api_object_prefix - describe all possible values in readme?
-# TODO: ujson?
-# TODO: убрать лишние правила из flake
-# TODO: типы возвращаемых значений
 
 ## Примечание
 veil-api-client не пытается анализировать ошибки возвращаемые VeiL. Например, если токен авторизации некорректен и 
 VeiL вернет 401, то veil-api-client просто ретранслирует ответ дальше. Прерывания исполнения не будет.
+В клиент токен должен передаваться уже с jwt. Сам тип токена хранится в payload токена и разбирается клиентом при сохранении.
 
 ## Список идемпадентных запросов
 

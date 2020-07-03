@@ -17,10 +17,13 @@ pytest-cov = "*"
 uvloop = "==0.14.0"
 setuptools = "*"
 wheel = "*"
+pytest-asyncio = "==0.14.0"
+async_generator = "==1.10"
+pytest-aiohttp = "==0.3.0"
 
 [packages]
 aiohttp = "==3.6.2"
-#aiohttp-retry = "==1.0.*"
-#
+ujson = "==3.0.0"
+
 #[requires]
 #python_version = "3.5"

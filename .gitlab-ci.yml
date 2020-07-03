@@ -1,5 +1,6 @@
 stages:
   - linter
+  - tests
 
 linter:
   image: python:3.5.9-alpine
@@ -8,5 +9,20 @@ linter:
     - python -m pip install --upgrade pip && python -m pip install flake8 flake8-builtins flake8-bugbear
   script:
     - flake8
+  only:
+    - merge_requests
+
+tests:
+  image: python:3.5.9-alpine
+  stage: tests
+  before_script:
+    - apk add build-base
+    - python -m pip install --upgrade pip
+    - python -m pip install pipenv
+    - pipenv install --dev
+    - pipenv lock --dev --requirements > dev_requirements.txt
+    - python -m pip install -r dev_requirements.txt
+  script:
+    - pytest
   only:
     - merge_requests
