@@ -4,7 +4,7 @@ import asyncio
 
 import uvloop
 
-from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator
+from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator, VeilClientSingleton
 
 
 # TODO: tests - доработать по отчету coverage
@@ -18,19 +18,32 @@ from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator
 async def main():
     """Примеры использования."""
     token_102 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjUsInVzZXJuYW1lIjoiYXBpLWNsaSIsImV4cCI6MTU5MzU5OTkyNiwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE1OTM1MTM1MjZ9.9EEhiXhxkWiOuRCscgyq6Go-O5Utofeg0j9iQzB55i8'
-    server_address_102 = '192.168.11.115'
+    server_address_115 = '192.168.11.115'
+    server_address_102 = '192.168.11.102'
+    factory = VeilClientSingleton()
+
+    print(factory.instances)
+    factory.add_client(server_address_102, token_102)
+    print(factory.instances)
+    factory.add_client(server_address_115, token_102)
+    factory.add_client(server_address_102, token_102)
+    print(factory.instances)
+    await factory.remove_client(server_address_102)
+    await factory.remove_client(server_address_115)
+    print(factory.instances)
+
 
     # paginator_type = VeilRestPaginator('vdi-server')
     # paginator_type2 = VeilRestPaginator(limit=1)
     # [D 200626 15:21:20 logging:26] http://192.168.11.115/api/tasks/4c3c7065-c742-4f78-93bc-6a5689a391b3: An internal error occurred while processing request: [Errno 32] Broken pipe
     # TODO: возвращается каждый раз открытая ранее сессия?
-    async with VeilClient(server_address=server_address_102, token=token_102, session_reopen=True,
-                          ujson_=False, timeout=5) as session:
-        domains_list_response = await session.domain().list()
-        # TODO: почему не подставляется status_code?
-        print('domain status: {}'.format(domains_list_response.status_code))
-        print('domain data: {}'.format(domains_list_response.data))
-        print('domain header: {}'.format(domains_list_response.headers))
+    # async with VeilClient(server_address=server_address_102, token=token_102, session_reopen=True,
+    #                       ujson_=False, timeout=5) as session:
+    #     domains_list_response = await session.domain().list()
+    #     # TODO: почему не подставляется status_code?
+    #     print('domain status: {}'.format(domains_list_response.status_code))
+    #     print('domain data: {}'.format(domains_list_response.data))
+    #     print('domain header: {}'.format(domains_list_response.headers))
 
     # print('Session 1 is closed.')
     # # del session

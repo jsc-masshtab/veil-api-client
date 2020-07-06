@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil https api client."""
 import json
-from weakref import WeakValueDictionary
 
 try:
     import ujson
@@ -18,28 +17,7 @@ from .api_objects.vdisk import VeilVDisk
 from .base.api_client import VeilApiClient
 
 
-class Singleton(type):
-    """Metaclass for VeilClient - singleton by server_address."""
-
-    __client_instances = WeakValueDictionary()
-
-    def __call__(cls, *args, **kwargs):
-        """Return VeilClient instance if it exists.
-
-        If VeilClient with server_address already exists - no need to create new.
-        If you need to destroy existing session - use del in your code.
-        """
-        server_address = args[0] if args else kwargs.get('server_address')
-
-        if server_address and server_address in cls.__client_instances:
-            return cls.__client_instances[server_address]
-
-        instance = super().__call__(*args, **kwargs)
-        cls.__client_instances[server_address] = instance
-        return cls.__client_instances[server_address]
-
-
-class VeilClient(VeilApiClient, metaclass=Singleton):
+class VeilClient(VeilApiClient):
     """Use this instead of VeilApiClient."""
 
     __TRANSFER_PROTOCOL_PREFIX = 'https://'
@@ -89,3 +67,39 @@ class VeilClient(VeilApiClient, metaclass=Singleton):
     def task(self, task_id: str = None):
         """Return VeilTask entity."""
         return VeilTask(client=self, task_id=task_id)
+
+
+class VeilClientSingleton:
+    """Contains previously initialized clients to minimize sessions on the VeiL controller.
+
+    If you have always running application, such as Tornado web-server and you need to
+    persistent VeiL ECP connections.
+    """
+
+    __client_instances = dict()
+
+    def add_client(self, server_address: str, token: str,
+                   timeout: int = 5 * 60):
+        """Create new instance of VeilClient if it is not initialized on same address.
+
+        Attributes:
+            server_address: VeiL server address (without protocol).
+            token: VeiL auth token.
+            timeout: aiohttp.ClientSession total timeout.
+        """
+        if server_address not in self.__client_instances:
+            instance = VeilClient(server_address=server_address, token=token,
+                                  session_reopen=True, timeout=timeout, ujson_=True)
+            self.__client_instances[server_address] = instance
+        return self.__client_instances[server_address]
+
+    async def remove_client(self, server_address: str):
+        """Remove and close existing VeilClient instance."""
+        if server_address in self.__client_instances:
+            _client = self.__client_instances.pop(server_address)
+            await _client.close()
+
+    @property
+    def instances(self) -> dict:
+        """Show all instances of VeilClient."""
+        return self.__client_instances

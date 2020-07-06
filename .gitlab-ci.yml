@@ -1,6 +1,7 @@
 stages:
   - linter
   - tests
+  - build
 
 linter:
   image: python:3.5.9-alpine
@@ -24,5 +25,20 @@ tests:
     - python -m pip install -r dev_requirements.txt
   script:
     - pytest
+  only:
+    - merge_requests
+
+build:
+  image: python:3.5.9-alpine
+  stage: build
+  before_script:
+    - apk add build-base
+    - python -m pip install --upgrade pip
+    - python -m pip install pipenv
+    - pipenv install --dev
+    - pipenv lock --dev --requirements > dev_requirements.txt
+    - python -m pip install -r dev_requirements.txt
+  script:
+    - python setup.py sdist bdist_wheel
   only:
     - merge_requests
