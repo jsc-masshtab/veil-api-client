@@ -17,21 +17,18 @@ from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator, 
 
 async def main():
     """Примеры использования."""
-    token_102 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjUsInVzZXJuYW1lIjoiYXBpLWNsaSIsImV4cCI6MTU5MzU5OTkyNiwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE1OTM1MTM1MjZ9.9EEhiXhxkWiOuRCscgyq6Go-O5Utofeg0j9iQzB55i8'
+    token_115 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjUsInVzZXJuYW1lIjoiYXBpLWNsaSIsImV4cCI6MTkwODI2MjI1Niwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE1OTM3NjYyNTZ9._41CVXezP1vDHoZyQ71UcadqPdti7-tmy_teEjfBgio'
     server_address_115 = '192.168.11.115'
-    server_address_102 = '192.168.11.102'
     factory = VeilClientSingleton()
 
-    print(factory.instances)
-    factory.add_client(server_address_102, token_102)
-    print(factory.instances)
-    factory.add_client(server_address_115, token_102)
-    factory.add_client(server_address_102, token_102)
-    print(factory.instances)
-    await factory.remove_client(server_address_102)
-    await factory.remove_client(server_address_115)
-    print(factory.instances)
+    session = factory.add_client(server_address_115, token_115)
 
+    domains_list_response = await session.domain().list()
+    print('domain status: {}'.format(domains_list_response.status_code))
+    print('domain data: {}'.format(domains_list_response.data))
+    print('domain header: {}'.format(domains_list_response.headers))
+
+    await factory.remove_client(server_address_115)
 
     # paginator_type = VeilRestPaginator('vdi-server')
     # paginator_type2 = VeilRestPaginator(limit=1)

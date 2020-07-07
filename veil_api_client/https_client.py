@@ -15,6 +15,7 @@ from .api_objects.node import VeilNode
 from .api_objects.task import VeilTask
 from .api_objects.vdisk import VeilVDisk
 from .base.api_client import VeilApiClient
+from .base.descriptors import IntType
 
 
 class VeilClient(VeilApiClient):
@@ -77,9 +78,14 @@ class VeilClientSingleton:
     """
 
     __client_instances = dict()
+    __TIMEOUT = IntType('__TIMEOUT')
+
+    def __init__(self, timeout: int = 5 * 60):
+        """Please see help(VeilClientSingleton) for more info."""
+        self.__TIMEOUT = timeout
 
     def add_client(self, server_address: str, token: str,
-                   timeout: int = 5 * 60):
+                   timeout: int = None):
         """Create new instance of VeilClient if it is not initialized on same address.
 
         Attributes:
@@ -87,9 +93,10 @@ class VeilClientSingleton:
             token: VeiL auth token.
             timeout: aiohttp.ClientSession total timeout.
         """
+        _timeout = timeout if timeout else self.__TIMEOUT
         if server_address not in self.__client_instances:
             instance = VeilClient(server_address=server_address, token=token,
-                                  session_reopen=True, timeout=timeout, ujson_=True)
+                                  session_reopen=True, timeout=_timeout, ujson_=True)
             self.__client_instances[server_address] = instance
         return self.__client_instances[server_address]
 
