@@ -12,6 +12,9 @@ class VeilApiResponse:
         status_code: http response status code.
         data: response json dictionary.
         headers: response headers.
+
+    Properties:
+        paginator_results: value of results key from response data. May presents only in list() queries.
     """
 
     def __init__(self, status_code, data, headers):
@@ -19,6 +22,15 @@ class VeilApiResponse:
         self.status_code = status_code
         self.data = data
         self.headers = headers
+
+    @property
+    def paginator_results(self):
+        """Value of results key from response data. May presents only in list() queries."""
+        # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
+        if self.status_code != 200 or not isinstance(self.data, dict) or 'results' not in self.data.keys():
+            return list()
+        else:
+            return self.data['results']
 
 
 def veil_api_response_decorator(func):
