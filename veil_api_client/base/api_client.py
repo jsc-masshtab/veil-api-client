@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil api client."""
+import logging
 from types import TracebackType
 from typing import Dict, Optional, Type
 from uuid import uuid4
@@ -12,7 +13,8 @@ except ImportError:  # pragma: no cover
 from .api_response import veil_api_response_decorator
 from .descriptors import NullableDictType, VeilJwtTokenType, VeilUrlStringType
 
-
+logger = logging.getLogger('veil-api-client.request')
+logger.addHandler(logging.NullHandler())
 # TODO: max retries must be configurable param with configuration of observable statuses
 
 
@@ -139,14 +141,24 @@ class VeilApiClient:
             self.__client_session = self.new_client_session
         return self.__client_session
 
+    async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
+                            json: dict = None) -> aiohttp.client_reqrep.ClientResponse:
+        """Log parameters and execute passed aiohttp method."""
+        # log request
+        logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
+                     params, json)
+        # determine aiohttp.client method to call
+        aiohttp_request_method = getattr(self.__session, method_name)
+        # call aiohttp.client method
+        return await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl, json=json)
+
     @veil_api_response_decorator
     async def get(self, url, extra_params: dict = None) -> aiohttp.client_reqrep.ClientResponse:
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
             params.update(extra_params)
-
-        return await self.__session.get(url,
+        return await self.__api_request('get', url,
                                         headers=self.__headers,
                                         params=params,
                                         ssl=self.__ssl_enabled)
@@ -154,16 +166,16 @@ class VeilApiClient:
     @veil_api_response_decorator
     async def post(self, url, json=None) -> aiohttp.client_reqrep.ClientResponse:
         """Send POST request to VeiL ECP."""
-        return await self.__session.post(url,
-                                         headers=self.__headers,
-                                         params=self.__params,
-                                         ssl=self.__ssl_enabled,
-                                         json=json)
+        return await self.__api_request('post', url,
+                                        headers=self.__headers,
+                                        params=self.__params,
+                                        ssl=self.__ssl_enabled,
+                                        json=json)
 
     @veil_api_response_decorator
     async def put(self, url, json=None) -> aiohttp.client_reqrep.ClientResponse:
         """Send PUT request to VeiL ECP."""
-        return await self.__session.put(url,
+        return await self.__api_request('put', url,
                                         headers=self.__headers,
                                         params=self.__params,
                                         ssl=self.__ssl_enabled,

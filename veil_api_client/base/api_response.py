@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """Veil api response."""
 import functools
+import logging
 
 from aiohttp.client_reqrep import ClientResponse
+
+logger = logging.getLogger('veil-api-client.response')
+logger.addHandler(logging.NullHandler())
 
 
 class VeilApiResponse:
@@ -22,6 +26,9 @@ class VeilApiResponse:
         self.status_code = status_code
         self.data = data
         self.headers = headers
+        if status_code != 200:
+            logger.warning('request status code is %s', status_code)
+        logger.debug('response data: %s', data)
 
     @property
     def paginator_results(self):
@@ -31,6 +38,15 @@ class VeilApiResponse:
             return list()
         else:
             return self.data['results']
+
+    @property
+    def value(self):
+        """Value of single-count entity from response data. May present in info() query."""
+        # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
+        if self.status_code != 200 or not isinstance(self.data, dict):
+            return dict()
+        else:
+            return self.data
 
 
 def veil_api_response_decorator(func):

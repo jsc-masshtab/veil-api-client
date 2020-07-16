@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
-from ..base.api_object import VeilApiObject
+from ..base.api_object import VeilApiObject, VeilRestPaginator
 from ..base.descriptors import BoolType, StringType, UuidStringType, argument_type_checker_decorator
 
 
@@ -38,56 +38,78 @@ class VeilDomain(VeilApiObject):
     Attributes:
         client: https_client instance.
         domain_id: VeiL domain id(uuid).
+        cluster_id:  node_id: VeiL cluster id(uuid) for extra filtering.
+        node_id:  node_id: VeiL node id(uuid) for extra filtering.
+        data_pool_id:  node_id: VeiL data-pool id(uuid) for extra filtering.
+        template:  VeiL template sign. Int because of ujson limitations (only str or int).
     """
 
     __API_OBJECT_PREFIX = 'domains/'
 
-    def __init__(self, client, domain_id: str = None) -> None:
-        """Please see help(VeilDomain) for more info."""
+    def __init__(self, client, domain_id: str = None, cluster_id: str = None, node_id: str = None,
+                 data_pool_id: str = None, template: int = None) -> None:
+        """Please see help(VeilDomain) for more info.
+
+        Arguments:
+            template: Boolean int (0|1).
+        """
         super().__init__(client, api_object_id=domain_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.remote_access = None
         self.verbose_name = None
         self.node = None
         self.parent = None
+        self.remote_access_port = None
+        self.graphics_password = None
+        self.template = template
+        # cluster_id, node_id or data_pool_id can be UUID.
+        self.cluster_id = str(cluster_id) if cluster_id else None
+        self.node_id = str(node_id) if node_id else None
+        self.data_pool_id = str(data_pool_id) if data_pool_id else None
 
     def action_url(self, action: str):
         """Build domain action full url."""
-        return self.api_object_url + action + '/'
+        return self.api_object_url + action
 
-    async def start(self):
+    async def start(self, force: bool = False):
         """Send domain action 'start'."""
         url = self.action_url('start/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
-    async def reboot(self):
+    async def reboot(self, force: bool = False):
         """Send domain action 'reboot'."""
         url = self.action_url('reboot/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
-    async def suspend(self):
+    async def suspend(self, force: bool = False):
         """Send domain action 'suspend'."""
         url = self.action_url('suspend/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
-    async def reset(self):
+    async def reset(self, force: bool = False):
         """Send domain action 'reset'."""
         url = self.action_url('reset/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
-    async def shutdown(self):
+    async def shutdown(self, force: bool = False):
         """Send domain action 'shutdown'."""
         url = self.action_url('shutdown/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
-    async def resume(self):
+    async def resume(self, force: bool = False):
         """Send domain action 'resume'."""
         url = self.action_url('resume/')
-        response = await self._client.post(url)
+        body = dict(force=force)
+        response = await self._client.post(url=url, json=body)
         return response
 
     async def remote_access_action(self, enable: bool = True):
@@ -118,3 +140,24 @@ class VeilDomain(VeilApiObject):
         body = dict(full=full, force=force)
         response = await self._client.post(url=url, json=body)
         return response
+
+    async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None):  # noqa
+        """Get list of data_pools with node_id filter.
+
+        By default get only domains with vdisks.
+        """
+
+        extra_params = dict(with_vdisks=int(with_vdisks))
+        if self.cluster_id:
+            extra_params['cluster'] = self.cluster_id
+        if self.node_id:
+            extra_params['node'] = self.node_id
+        if self.data_pool_id:
+            extra_params['datapool'] = self.data_pool_id
+        if isinstance(self.template, int):
+            extra_params['template'] = self.template
+        elif isinstance(self.template, bool):
+            # ujson can`t work with booleans
+            extra_params['template'] = int(self.template)
+
+        return await super().list(paginator=paginator, extra_params=extra_params)

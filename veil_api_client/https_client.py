@@ -41,9 +41,11 @@ class VeilClient(VeilApiClient):
                          cookies=cookies,
                          json_serialize=serializer)
 
-    def domain(self, domain_id: str = None):
+    def domain(self, domain_id: str = None, cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
+               template: bool = None):
         """Return VeilDomain entity."""
-        return VeilDomain(client=self, domain_id=domain_id)
+        return VeilDomain(client=self, template=template, domain_id=domain_id, cluster_id=cluster_id, node_id=node_id,
+                          data_pool_id=data_pool_id)
 
     def controller(self, controller_id: str = None):
         """Return VeilController entity."""
@@ -53,13 +55,13 @@ class VeilClient(VeilApiClient):
         """Return VeilCluster entity."""
         return VeilCluster(client=self, cluster_id=cluster_id)
 
-    def data_pool(self, data_pool_id: str = None):
+    def data_pool(self, data_pool_id: str = None, node_id: str = None):
         """Return VeilDataPool entity."""
-        return VeilDataPool(client=self, data_pool_id=data_pool_id)
+        return VeilDataPool(client=self, data_pool_id=data_pool_id, node_id=node_id)
 
-    def node(self, node_id: str = None):
+    def node(self, node_id: str = None, cluster_id: str = None):
         """Return VeilNode entity."""
-        return VeilNode(client=self, node_id=node_id)
+        return VeilNode(client=self, node_id=node_id, cluster_id=cluster_id)
 
     def vdisk(self, vdisk_id: str = None):
         """Return VeilVDisk entity."""

@@ -8,9 +8,7 @@ from .descriptors import (NullableIntType, NullableStringType,
 
 
 class VeilRestPaginator:
-    """ECP VeiL paginator description.
-
-    VeiL Paginator interface.
+    """VeiL Paginator interface.
 
     Attributes:
         name: name value pattern.
@@ -154,10 +152,12 @@ class VeilApiObject:
         return self.status == self.__STATUS.partial if self.status else False
 
     @argument_type_checker_decorator  # noqa
-    async def list(self, paginator: VeilRestPaginator = None):
+    async def list(self, paginator: VeilRestPaginator = None, extra_params: dict = None):
         """List all objects of Veil api object class."""
-        paginator = paginator.notnull_attrs if paginator else None
-        return await self._client.get(self.base_url, paginator)
+        params = paginator.notnull_attrs if paginator else dict()
+        if extra_params:
+            params.update(extra_params)
+        return await self._client.get(self.base_url, extra_params=params)
 
     async def info(self):
         """Get api object instance and update public attrs."""

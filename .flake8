@@ -2,4 +2,4 @@
 inline-quotes = single
 max-line-length = 120
 
-exclude = .git, __pycache__, venv/, env/, app.py
+exclude = .git, __pycache__, venv/, env/, app.py, build/
