@@ -64,3 +64,9 @@ class VeilTask(VeilApiObject):
         url = self.api_object_url + 'response/'
         response = await self._client.get(url)
         return response
+
+    @property
+    async def completed(self):
+        """Check that task is completed."""
+        response = await self.check()
+        return response.value == 'SUCCESS'

@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 """Temporary runner."""
 import asyncio
-
 import uvloop
 
 from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator, VeilClientSingleton
 
-
 # TODO: tests - доработать по отчету coverage
 # TODO: api_object_prefix - в README указать, что это путь к сущности на ECP
 # TODO: description - документация
-# TODO: logging - wknd
 # TODO: retry - wknd
 # TODO: типы возвращаемых значений - wknd
 
@@ -23,10 +20,10 @@ async def main():
 
     session = factory.add_client(server_address_115, token_115)
 
-    domains_list_response = await session.domain().list()
+    domains_list_response = await session.domain().list(with_vdisks=False)
+
     print('domain status: {}'.format(domains_list_response.status_code))
     print('domain data: {}'.format(domains_list_response.data))
-    print('domain header: {}'.format(domains_list_response.headers))
 
     await factory.remove_client(server_address_115)
 
@@ -44,7 +41,7 @@ async def main():
 
     # print('Session 1 is closed.')
     # # del session
-    # session_obj = VeilClient(server_address=server_address_102, token=token_102, ssl_enabled=False,
+    # session_obj = VeilClient(server_address=server_address_115, token=token_115, ssl_enabled=False,
     #                          extra_params={'async': 1},
     #                          timeout=2, session_reopen=False)
     #
@@ -57,7 +54,7 @@ async def main():
     # create_response = await domain.create(domain_configuration)
     # print(create_response.status_code)
     # print(create_response.data)
-    #
+    # #
     # await session_obj.close()
     # print('Session 2 is closed.')
     #
