@@ -3,7 +3,7 @@
 import asyncio
 import uvloop
 
-from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator, VeilClientSingleton
+from veil_api_client import VeilClientSingleton, VeilRestPaginator
 
 # TODO: tests - доработать по отчету coverage
 # TODO: api_object_prefix - в README указать, что это путь к сущности на ECP
@@ -14,23 +14,29 @@ from veil_api_client import DomainConfiguration, VeilClient, VeilRestPaginator, 
 
 async def main():
     """Примеры использования."""
-    token_115 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjUsInVzZXJuYW1lIjoiYXBpLWNsaSIsImV4cCI6MTkwODI2MjI1Niwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE1OTM3NjYyNTZ9._41CVXezP1vDHoZyQ71UcadqPdti7-tmy_teEjfBgio'
-    server_address_115 = '192.168.11.115'
-    factory = VeilClientSingleton()
+    token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V'
+    token2 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V'
+    server1 = '192.168.11.115'
+    server2 = '192.168.11.102'
 
-    session = factory.add_client(server_address_115, token_115)
-
-    domains_list_response = await session.domain().list(with_vdisks=False)
-
-    print('domain status: {}'.format(domains_list_response.status_code))
-    print('domain data: {}'.format(domains_list_response.data))
-
-    await factory.remove_client(server_address_115)
-
-    # paginator_type = VeilRestPaginator('vdi-server')
-    # paginator_type2 = VeilRestPaginator(limit=1)
-    # [D 200626 15:21:20 logging:26] http://192.168.11.115/api/tasks/4c3c7065-c742-4f78-93bc-6a5689a391b3: An internal error occurred while processing request: [Errno 32] Broken pipe
-    # TODO: возвращается каждый раз открытая ранее сессия?
+    # Инициализируем класс для работы с клиентами
+    veil_client = VeilClientSingleton()
+    # Добавляем подключение к первому контроллеру
+    session1 = veil_client.add_client(server1, token1)
+    domains_list_response = await session1.domain().list()
+    # Добавляем еще одно подключение к контроллеру
+    # В результате у session2 будет ссылка на тот же клиент, что передан для session
+    session2 = veil_client.add_client(server1, token1)
+    # Устанавливаем соединение с еще одним контроллером
+    session2 = veil_client.add_client(server2, token2)
+    domains_list_response2 = await session2.domain().list()
+    # Удаляем существующую сессию для контроллера, давая возможность изменить ему настройки
+    await veil_client.remove_client(server1)
+    ...
+    # Перед завершением приложения закрываем все используемые сессии
+    instances = veil_client.instances
+    for instance in instances:
+        await instances[instance].close()
     # async with VeilClient(server_address=server_address_102, token=token_102, session_reopen=True,
     #                       ujson_=False, timeout=5) as session:
     #     domains_list_response = await session.domain().list()

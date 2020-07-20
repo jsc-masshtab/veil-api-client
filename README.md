@@ -2,57 +2,129 @@
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
 
-
-## Примечание
-veil-api-client не пытается анализировать ошибки возвращаемые VeiL. Например, если токен авторизации некорректен и 
-VeiL вернет 401, то veil-api-client просто ретранслирует ответ дальше. Прерывания исполнения не будет.
-В клиент токен должен передаваться уже с jwt. Сам тип токена хранится в payload токена и разбирается клиентом при сохранении.
-
-## Список идемпадентных запросов
-
-## Откуда брать коды ошибок VeiL
-## Примеры вызова
-Скорее всего вы захотите использовать клиент в паре с uvloop.
-Использовать клиент лучше через менеджер контекста:
-TODO: опция при которой логгируются все запросы и ответы
-```
-async with HttpsApiClient(server_address=server_address, token=token) as session:
-    domain = session.domain()
-    domain2 = session.domain('a3e02ced-037f-41ab-b0bb-61771ae00b40')
-
-    domains_list_response = await domain.list()
-
-    domain_info_response = await domain2.info()
-    domain_start_response = await domain2.start()
-
-    domain.api_object_id = 'a3e02ced-037f-41ab-b0bb-61771ae00b40'
-    domain_info_response2 = await domain.info()
-
-    domain_remote_response = await domain.remote_access(enable=False)
-    domain_remote_response = await domain.remote_access(enable=False)
-
-    print(domains_list_response.status_code)
-    print(domains_list_response.json)
-
-    print(domain_info_response.status_code)
-    print(domain_info_response.json)
-
-    print(domain_start_response.status_code)
-    print(domain_start_response.json)
-
-    print(domain_info_response2.status_code)
-
-    print(domain_remote_response.status_code)
-    print(domain_remote_response.json)
-```
-Но если этот вариант не подходит - не забудьте закрыть сессию.
-```
-session = HttpsApiClient(server_address=server_address, token=token)
-response = await session.domain().list()
-print(response.status_code)
-print(response.json)
-await session.close()
-```    
+# VeiL api client
+Предназначен для упрощения интеграции между конечным приложением/скриптом и ECP VeiL. Если вы не хотите слишком глубоко 
+погружаться в детали и нюансы работы с сессиями, сущностями и конечным API VeiL, а так же вам нужен асинхронный клиент - 
+рассмотрите работу через данную библиотеку. Внутри мы используем aiohttp client.
 
 ## Установка
-`pip install veil_api_client-2.0.0-py3-none-any.whl` 
+В ближайшее время библиотека должна стать доступной через pypi, но на данный момент самый простой способ установки это
+выполнить установку через pip с ссылкой на gitlab-репозиторий:
+`pip install git+http://gitlab.bazalt.team/vdi/veil-api-client`
+
+## Использование
+Предусмотрено два возможных сценария использования: постоянная работа и разовый запуск с завершением.
+
+### Разовый запуск
+Если ваш сценарий использования это асинхронный скрипт, который должен выполнить 1 действие и завершить свою работу,
+то лучше всего использовать менеджер контекста. Например, Вам нужно получить список из 10 ВМ на ECP VeiL и для каждой
+выполнить комманду start:
+```
+from veil_api_client import VeilClient, VeilRestPaginator
+
+
+token_115 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V'
+server_address_115 = '192.168.11.115'
+
+async with VeilClient(server_address=server_address_115, token=token_115) as session:
+    # Настраиваем пагинатор - сортировка по полю verbose_name, первые 10 записей.
+    paginator = VeilRestPaginator(ordering='verbose_name', limit=10)
+    # У каждой сессии есть атрибут - сущность на ECP VeiL.
+    veil_domain_entity = session.domain()
+    # получаем ответ со списком вм
+    veil_response = await veil_domain_entity.list(paginator=paginator)
+    if veil_response.status_code != 200:
+        return 'Ошибка получения информации от VeiL'
+    # paginator_results есть у каждого ответа метода list(), если использован метод info, необходимо вызвать value
+    domain_list = veil_response.paginator_results
+    # Включаем каждую из полученных ВМ
+    for domain in domain_list:
+        await session.domain(domain_id=domain['id']).start()
+```
+
+### Постоянно запущенное приложение
+Если ваше приложение запущено постоянно и ему необходима постоянная связь с несколькими VeiL ECP, то стоит использовать **VeilClientSingleton**
+Например, вы используете несколько запросов с несколькими контроллерами
+```
+token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V'
+token2 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2V'
+server1 = '192.168.11.115'
+server2 = '192.168.11.102'
+
+# Инициализируем класс для работы с клиентами
+veil_client = VeilClientSingleton()
+# Добавляем подключение к первому контроллеру
+session1 = veil_client.add_client(server1, token1)
+domains_list_response = await session1.domain().list()
+# Добавляем еще одно подключение к контроллеру
+# В результате у session2 будет ссылка на тот же клиент, что передан для session
+session2 = veil_client.add_client(server1, token1)
+# Устанавливаем соединение с еще одним контроллером
+session2 = veil_client.add_client(server2, token2)
+domains_list_response2 = await session2.domain().list()
+# Удаляем существующую сессию для контроллера, давая возможность изменить ему настройки
+await veil_client.remove_client(server1)
+...
+# Перед завершением приложения закрываем все используемые сессии
+instances = veil_client.instances
+for instance in instances:
+    await instances[instance].close()
+```
+Основное отличие этого примера - библиотека будет хранить ранее созданный инстанс клиента для конкретного контроллера.
+Это сократит возможные дублирования сессий и временные затраты на установку соединения для запросов с маленьким временным интервалом.
+При таком сценарии использования - слежение за закрытием сессий перекладывается на ваше приложение.
+
+## Конфигурация
+Если вам потребовалось использовать сетевые запросы, то с большой долей вероятности Вы захотите использовать uvloop.
+Пример установки можно посмотреть [тут](https://github.com/MagicStack/uvloop)
+Большинство значений передаваемых по умолчанию являются оптимальными настройками VeiL VDI, однако может потребоваться их
+изменить, например, по умолчанию в библиотеке используется ujson, поэтому если Вы расширяете написанные методы имейте 
+ввиду ограничения, которые он накладывает, либо переопределите опцию ujson_ на False.
+
+### Конфигурируемые параметры VeilClient:
+```
+server_address: адрес контроллера VeiL (без указания протокола, мы сами подставим https)
+token: токен интеграции VeiL.
+ssl_enabled: валидация ssl-сертификата (параметр aiohttp.client).
+session_reopen: автоматически открывать сессию aiohttp.ClientSession, если она закрыта.
+timeout: aiohttp.ClientSession общий таймаут.
+extra_headers: дополнительные заголовки для сессии (расширяющие или переопределяющие стандартные заголовки).
+extra_params:дополнительные параметры запроса для сессии (расширяющие или переопределяющие стандартные параметры).
+cookies: дополнительные куки (скорее всего вам это не нужно)
+ujson_: использовать или нет ujson.
+```
+
+### Конфигурируемые параметры VeilClientSingleton:
+```
+server_address: адрес контроллера VeiL (без указания протокола, мы сами подставим https)
+token: токен интеграции VeiL.
+timeout: aiohttp.ClientSession общий таймаут.
+```
+Мы намеренно сократили конфигурируемые параметры для данного класса, в целях облегчения и оптимизации запросов. Если
+вы хотите что-то расширить - сделайте собственный класс по аналогии либо запросите доработку через issue.
+
+## Сущности, к которым предоставляется доступ и их методы
+любой инстанс клиента предоставляет доступ к следующим сущностям:
+* Кластер - VeilClient.cluster()
+* Контроллер - VeilClient.controller()
+* Датапул - VeilClient.data_pool()
+* Домен (Виртуальная машина) - VeilClient.domain()
+* Нода (узел, сервер) - VeilClient.node()
+* Задача - VeilClient.task()
+* Виртуальный диск - VeilClient.vdisk()
+Если при инициализации сущности не был передан id сущности, то есть возможность работы только с обобщенными методами
+вроде list(). Если вы хотите иметь доступ к методам конкретной сущности - необходимо указать ее id.
+
+### Основные методы сущностей
+* list() - асинхронный метод для получения списка сущностей на VeiL, использует переопределяемый пагинатор. Если сущностей
+больше 100 - вам необходимо самостоятельно настроить limit для пагинатора, иначе будет 100. 
+* info() - получение информации о конкретной сущности. После вызова этого метода Вы можете использовать как атрибут *.value*
+так и конкретные атрибуты у сущности, например domain.service
+* public_attrs - список всех публичных атрибутов. После получения info они будут обновлены.
+* uuid_ - конвертирует str с id в uuid.
+* creating - результат операция сравнения статуса сущности
+* active - результат операция сравнения статуса сущности
+* failed - результат операция сравнения статуса сущности
+* deleting - результат операция сравнения статуса сущности
+* service - результат операция сравнения статуса сущности
+* partial - результат операция сравнения статуса сущности

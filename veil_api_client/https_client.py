@@ -19,7 +19,19 @@ from .base.descriptors import IntType
 
 
 class VeilClient(VeilApiClient):
-    """Use this instead of VeilApiClient."""
+    """Use this instead of VeilApiClient.
+
+    Attributes:
+        server_address: VeiL server address (without protocol)
+        token: VeiL auth token.
+        ssl_enabled: ssl-certificate validation.
+        session_reopen: auto reopen aiohttp.ClientSession when it`s closed
+        timeout: aiohttp.ClientSession total timeout.
+        extra_headers: additional user headers.
+        extra_params: additional user params.
+        cookies: additional user cookies (probably useless)
+        ujson_: ujson using.
+    """
 
     __TRANSFER_PROTOCOL_PREFIX = 'https://'
 

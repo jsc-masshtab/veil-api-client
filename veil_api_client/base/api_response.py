@@ -48,6 +48,8 @@ class VeilApiResponse:
         else:
             return self.data
 
+    # TODO: универсальный метод возвращающий список из 1 или нескольких элементов в зависимости от запроса
+
 
 def veil_api_response_decorator(func):
     """Make VeilApiResponse from aiohttp.response."""
