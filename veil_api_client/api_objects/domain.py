@@ -146,8 +146,9 @@ class VeilDomain(VeilApiObject):
 
         By default get only domains with vdisks.
         """
-
-        extra_params = dict(with_vdisks=int(with_vdisks))
+        # TODO: veil problems. temporary disabled
+        # extra_params = dict(with_vdisks=int(with_vdisks))
+        extra_params = dict()
         if self.cluster_id:
             extra_params['cluster'] = self.cluster_id
         if self.node_id:

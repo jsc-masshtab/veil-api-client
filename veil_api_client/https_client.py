@@ -67,9 +67,9 @@ class VeilClient(VeilApiClient):
         """Return VeilCluster entity."""
         return VeilCluster(client=self, cluster_id=cluster_id)
 
-    def data_pool(self, data_pool_id: str = None, node_id: str = None):
+    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None):
         """Return VeilDataPool entity."""
-        return VeilDataPool(client=self, data_pool_id=data_pool_id, node_id=node_id)
+        return VeilDataPool(client=self, data_pool_id=data_pool_id, node_id=node_id, cluster_id=cluster_id)
 
     def node(self, node_id: str = None, cluster_id: str = None):
         """Return VeilNode entity."""
