@@ -3,7 +3,7 @@
 import asyncio
 import uvloop
 
-from veil_api_client import VeilClientSingleton, VeilRestPaginator
+from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient
 
 # TODO: tests - доработать по отчету coverage
 # TODO: api_object_prefix - в README указать, что это путь к сущности на ECP
@@ -19,6 +19,8 @@ async def main():
     server1 = '192.168.11.115'
     server2 = '192.168.11.102'
 
+    veil_single = VeilClient
+    veil_single.domain()
     # Инициализируем класс для работы с клиентами
     veil_client = VeilClientSingleton()
     # Добавляем подключение к первому контроллеру

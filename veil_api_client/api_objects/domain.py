@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
 from ..base.api_object import VeilApiObject, VeilRestPaginator
+from ..base.api_response import VeilApiResponse
 from ..base.descriptors import BoolType, StringType, UuidStringType, argument_type_checker_decorator
 
 
@@ -66,82 +67,82 @@ class VeilDomain(VeilApiObject):
         self.node_id = str(node_id) if node_id else None
         self.data_pool_id = str(data_pool_id) if data_pool_id else None
 
-    def action_url(self, action: str):
+    def action_url(self, action: str) -> str:
         """Build domain action full url."""
         return self.api_object_url + action
 
-    async def start(self, force: bool = False):
+    async def start(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'start'."""
         url = self.action_url('start/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def reboot(self, force: bool = False):
+    async def reboot(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'reboot'."""
         url = self.action_url('reboot/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def suspend(self, force: bool = False):
+    async def suspend(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'suspend'."""
         url = self.action_url('suspend/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def reset(self, force: bool = False):
+    async def reset(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'reset'."""
         url = self.action_url('reset/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def shutdown(self, force: bool = False):
+    async def shutdown(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'shutdown'."""
         url = self.action_url('shutdown/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def resume(self, force: bool = False):
+    async def resume(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'resume'."""
         url = self.action_url('resume/')
         body = dict(force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def remote_access_action(self, enable: bool = True):
+    async def remote_access_action(self, enable: bool = True) -> 'VeilApiResponse':
         """Send domain action 'remote-action'."""
         url = self.api_object_url + 'remote-access/'
         body = dict(remote_access=enable)
         response = await self._client.post(url, json=body)
         return response
 
-    async def enable_remote_access(self):
+    async def enable_remote_access(self) -> 'VeilApiResponse':
         """Enable domain remote-access."""
         return await self.remote_access_action(enable=True)
 
-    async def disable_remote_access(self):
+    async def disable_remote_access(self) -> 'VeilApiResponse':
         """Disable domain remote-access."""
         return await self.remote_access_action(enable=False)
 
     @argument_type_checker_decorator
-    async def create(self, domain_configuration: DomainConfiguration):
+    async def create(self, domain_configuration: DomainConfiguration) -> 'VeilApiResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
         response = await self._client.post(url=url, json=domain_configuration.__dict__)
         return response
 
-    async def remove(self, full: bool = True, force: bool = False):
+    async def remove(self, full: bool = True, force: bool = False) -> 'VeilApiResponse':
         """Remove domain instance on VeiL ECP."""
         url = self.api_object_url + 'remove/'
         body = dict(full=full, force=force)
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None):  # noqa
+    async def list(self, with_vdisks: bool = True, paginator: 'VeilRestPaginator' = None) -> 'VeilApiResponse':  # noqa
         """Get list of data_pools with node_id filter.
 
         By default get only domains with vdisks.

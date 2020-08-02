@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil cluster entity."""
 from ..base.api_object import VeilApiObject
+from ..base.api_response import VeilApiResponse
 
 
 class VeilCluster(VeilApiObject):
@@ -22,7 +23,7 @@ class VeilCluster(VeilApiObject):
         self.memory_count = None
         self.vdi = None
 
-    async def usage(self):
+    async def usage(self) -> 'VeilApiResponse':
         """Get minimum statistics of resource loading."""
         url = self.api_object_url + 'usage/'
         response = await self._client.get(url)

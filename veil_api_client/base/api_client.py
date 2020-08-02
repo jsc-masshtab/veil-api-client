@@ -52,7 +52,7 @@ class VeilApiClient:
     def __init__(self, server_address: str, token: str, transfer_protocol: str, ssl_enabled: bool = True,
                  session_reopen: bool = False, timeout: int = 5 * 60, extra_headers: dict = None,
                  extra_params: dict = None, cookies: dict = None, json_serialize: aiohttp.client.JSONEncoder = None
-                 ):
+                 ) -> None:
         """Please see help(VeilApiClient) for more info."""
         if aiohttp is None:
             raise RuntimeError('Please install `aiohttp`')  # pragma: no cover
@@ -89,18 +89,18 @@ class VeilApiClient:
         await self.__session.close()
 
     @property
-    def new_client_session(self):
+    def new_client_session(self) -> 'aiohttp.ClientSession':
         """Return new ClientSession instance."""
         return aiohttp.ClientSession(timeout=self.__timeout, cookies=self.__cookies,
                                      json_serialize=self.__json_serialize)
 
     @property
-    def base_url(self):
+    def base_url(self) -> str:
         """Build controller api url."""
         return ''.join([self.__transfer_protocol_prefix, self.server_address, '/api/'])
 
     @property
-    def __base_params(self) -> Dict:
+    def __base_params(self) -> Dict[str, int]:
         return {'async': 1}
 
     @property
@@ -112,7 +112,7 @@ class VeilApiClient:
         return params
 
     @property
-    def __base_headers(self) -> Dict:
+    def __base_headers(self) -> Dict[str, str]:
         headers_dict = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -127,7 +127,7 @@ class VeilApiClient:
         return headers_dict
 
     @property
-    def __headers(self) -> Dict:
+    def __headers(self) -> Dict[str, str]:
         """Return base_headers extended by user extra_headers."""
         headers = self.__base_headers
         if self.__extra_headers and isinstance(self.__extra_headers, dict):
@@ -135,14 +135,14 @@ class VeilApiClient:
         return headers
 
     @property
-    def __session(self) -> aiohttp.ClientSession:
+    def __session(self) -> 'aiohttp.ClientSession':
         """Return connection ClientSession."""
         if self.__client_session.closed and self.__session_reopen:
             self.__client_session = self.new_client_session
         return self.__client_session
 
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
-                            json: dict = None) -> aiohttp.client_reqrep.ClientResponse:
+                            json: dict = None) -> 'aiohttp.client_reqrep.ClientResponse':
         """Log parameters and execute passed aiohttp method."""
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
@@ -153,7 +153,7 @@ class VeilApiClient:
         return await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl, json=json)
 
     @veil_api_response_decorator
-    async def get(self, url, extra_params: dict = None) -> aiohttp.client_reqrep.ClientResponse:
+    async def get(self, url, extra_params: dict = None) -> 'aiohttp.client_reqrep.ClientResponse':
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
@@ -164,7 +164,7 @@ class VeilApiClient:
                                         ssl=self.__ssl_enabled)
 
     @veil_api_response_decorator
-    async def post(self, url, json=None) -> aiohttp.client_reqrep.ClientResponse:
+    async def post(self, url, json=None) -> 'aiohttp.client_reqrep.ClientResponse':
         """Send POST request to VeiL ECP."""
         return await self.__api_request('post', url,
                                         headers=self.__headers,
@@ -173,7 +173,7 @@ class VeilApiClient:
                                         json=json)
 
     @veil_api_response_decorator
-    async def put(self, url, json=None) -> aiohttp.client_reqrep.ClientResponse:
+    async def put(self, url, json=None) -> 'aiohttp.client_reqrep.ClientResponse':
         """Send PUT request to VeiL ECP."""
         return await self.__api_request('put', url,
                                         headers=self.__headers,

@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from .api_client import VeilApiClient
+from .api_response import VeilApiResponse
 from .descriptors import (NullableIntType, NullableStringType,
                           TypeChecker, UuidStringType, argument_type_checker_decorator)
 
@@ -22,7 +23,7 @@ class VeilRestPaginator:
     limit = NullableIntType('limit')
     offset = NullableIntType('offset')
 
-    def __init__(self, name: str = None, ordering: str = None, limit: int = None, offset: int = None):
+    def __init__(self, name: str = None, ordering: str = None, limit: int = None, offset: int = None) -> None:
         """Please see help(VeilRestPaginator) for more info."""
         self.name = name
         self.ordering = ordering
@@ -30,7 +31,7 @@ class VeilRestPaginator:
         self.offset = offset
 
     @property
-    def notnull_attrs(self):
+    def notnull_attrs(self) -> dict:
         """Return only attributes with values."""
         return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr]}
 
@@ -59,7 +60,7 @@ class VeilApiObject:
         service = 'SERVICE'
         partial = 'PARTIAL'
 
-    def __init__(self, client, api_object_prefix: str, api_object_id: str = None):
+    def __init__(self, client, api_object_prefix: str, api_object_id: str = None) -> None:
         """Please see help(VeilApiObject) for more info."""
         self.__api_object_prefix = api_object_prefix
         self._client = client
@@ -67,7 +68,7 @@ class VeilApiObject:
         self.status = None
         self.verbose_name = None
 
-    def _update(self, attrs_dict: dict):
+    def _update(self, attrs_dict: dict) -> None:
         """Update public class attributes ignoring property."""
         for attr in attrs_dict:
             if attr.startswith('_'):
@@ -97,7 +98,7 @@ class VeilApiObject:
         return result_dict
 
     @property
-    def uuid_(self):
+    def uuid_(self) -> UUID:
         """Convert a string with id to UUID."""
         try:
             object_id = self.api_object_id
@@ -110,12 +111,12 @@ class VeilApiObject:
         return object_uuid
 
     @property
-    def base_url(self):
+    def base_url(self) -> str:
         """Build entity full url (without id)."""
         return ''.join([self._client.base_url, self.__api_object_prefix])
 
     @property
-    def api_object_url(self):
+    def api_object_url(self) -> str:
         """Build entity full url (with url)."""
         if not self.api_object_id:
             raise AttributeError('api_object_id is empty.')
@@ -152,14 +153,15 @@ class VeilApiObject:
         return self.status == self.__STATUS.partial if self.status else False
 
     @argument_type_checker_decorator  # noqa
-    async def list(self, paginator: VeilRestPaginator = None, extra_params: dict = None):
+    async def list(self, paginator: 'VeilRestPaginator' = None,
+                   extra_params: dict = None) -> 'VeilApiResponse':
         """List all objects of Veil api object class."""
         params = paginator.notnull_attrs if paginator else dict()
         if extra_params:
             params.update(extra_params)
         return await self._client.get(self.base_url, extra_params=params)
 
-    async def info(self):
+    async def info(self) -> 'VeilApiResponse':
         """Get api object instance and update public attrs."""
         response = await self._client.get(self.api_object_url)
         if response.status_code == 200 and response.data:

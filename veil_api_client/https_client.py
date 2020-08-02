@@ -54,32 +54,32 @@ class VeilClient(VeilApiClient):
                          json_serialize=serializer)
 
     def domain(self, domain_id: str = None, cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
-               template: bool = None):
+               template: bool = None) -> 'VeilDomain':
         """Return VeilDomain entity."""
         return VeilDomain(client=self, template=template, domain_id=domain_id, cluster_id=cluster_id, node_id=node_id,
                           data_pool_id=data_pool_id)
 
-    def controller(self, controller_id: str = None):
+    def controller(self, controller_id: str = None) -> 'VeilController':
         """Return VeilController entity."""
         return VeilController(client=self, controller_id=controller_id)
 
-    def cluster(self, cluster_id: str = None):
+    def cluster(self, cluster_id: str = None) -> 'VeilCluster':
         """Return VeilCluster entity."""
         return VeilCluster(client=self, cluster_id=cluster_id)
 
-    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None):
+    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None) -> 'VeilDataPool':
         """Return VeilDataPool entity."""
         return VeilDataPool(client=self, data_pool_id=data_pool_id, node_id=node_id, cluster_id=cluster_id)
 
-    def node(self, node_id: str = None, cluster_id: str = None):
+    def node(self, node_id: str = None, cluster_id: str = None) -> 'VeilNode':
         """Return VeilNode entity."""
         return VeilNode(client=self, node_id=node_id, cluster_id=cluster_id)
 
-    def vdisk(self, vdisk_id: str = None):
+    def vdisk(self, vdisk_id: str = None) -> 'VeilVDisk':
         """Return VeilVDisk entity."""
         return VeilVDisk(client=self, vdisk_id=vdisk_id)
 
-    def task(self, task_id: str = None):
+    def task(self, task_id: str = None) -> 'VeilTask':
         """Return VeilTask entity."""
         return VeilTask(client=self, task_id=task_id)
 
@@ -94,12 +94,12 @@ class VeilClientSingleton:
     __client_instances = dict()
     __TIMEOUT = IntType('__TIMEOUT')
 
-    def __init__(self, timeout: int = 5 * 60):
+    def __init__(self, timeout: int = 5 * 60) -> None:
         """Please see help(VeilClientSingleton) for more info."""
         self.__TIMEOUT = timeout
 
     def add_client(self, server_address: str, token: str,
-                   timeout: int = None):
+                   timeout: int = None) -> 'VeilClient':
         """Create new instance of VeilClient if it is not initialized on same address.
 
         Attributes:
@@ -114,7 +114,7 @@ class VeilClientSingleton:
             self.__client_instances[server_address] = instance
         return self.__client_instances[server_address]
 
-    async def remove_client(self, server_address: str):
+    async def remove_client(self, server_address: str) -> None:
         """Remove and close existing VeilClient instance."""
         if server_address in self.__client_instances:
             _client = self.__client_instances.pop(server_address)

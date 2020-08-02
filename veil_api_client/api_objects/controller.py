@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil controller entity."""
 from ..base.api_object import VeilApiObject
+from ..base.api_response import VeilApiResponse
 
 
 class VeilController(VeilApiObject):
@@ -18,21 +19,21 @@ class VeilController(VeilApiObject):
         super().__init__(client, api_object_id=controller_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.version = None
 
-    async def base_version(self):
+    async def base_version(self) -> 'VeilApiResponse':
         """Get the controller version."""
         url = self.base_url + 'base-version/'
         response = await self._client.get(url)
         self.version = response.data.get('version')
         return response
 
-    async def check(self):
+    async def check(self) -> 'VeilApiResponse':
         """Check controller availability."""
         url = self.base_url + 'check/'
         response = await self._client.get(url)
         return response
 
     @property
-    async def ok(self):
+    async def ok(self) -> bool:
         """Availability check successful."""
         check_response = await self.check()
         return check_response.status_code == 200

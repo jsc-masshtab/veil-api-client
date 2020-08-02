@@ -21,7 +21,7 @@ class VeilApiResponse:
         paginator_results: value of results key from response data. May presents only in list() queries.
     """
 
-    def __init__(self, status_code, data, headers):
+    def __init__(self, status_code, data, headers) -> None:
         """Please see help(VeilApiResponse) for more info."""
         self.status_code = status_code
         self.data = data
@@ -31,7 +31,7 @@ class VeilApiResponse:
         logger.debug('response data: %s', data)
 
     @property
-    def paginator_results(self):
+    def paginator_results(self) -> list:
         """Value of results key from response data. May presents only in list() queries."""
         # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
         if self.status_code != 200 or not isinstance(self.data, dict) or 'results' not in self.data.keys():
@@ -40,7 +40,7 @@ class VeilApiResponse:
             return self.data['results']
 
     @property
-    def value(self):
+    def value(self) -> dict:
         """Value of single-count entity from response data. May present in info() query."""
         # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
         if self.status_code != 200 or not isinstance(self.data, dict):
@@ -51,7 +51,7 @@ class VeilApiResponse:
     # TODO: универсальный метод возвращающий список из 1 или нескольких элементов в зависимости от запроса
 
 
-def veil_api_response_decorator(func):
+def veil_api_response_decorator(func) -> 'VeilApiResponse':
     """Make VeilApiResponse from aiohttp.response."""
 
     @functools.wraps(func)
