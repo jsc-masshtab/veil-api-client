@@ -62,6 +62,7 @@ class VeilDomain(VeilApiObject):
         self.remote_access_port = None
         self.graphics_password = None
         self.template = template
+        self.os_type = None
         # cluster_id, node_id or data_pool_id can be UUID.
         self.cluster_id = str(cluster_id) if cluster_id else None
         self.node_id = str(node_id) if node_id else None
