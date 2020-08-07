@@ -142,7 +142,7 @@ class VeilApiClient:
         return self.__client_session
 
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
-                            json: dict = None) -> 'aiohttp.client_reqrep.ClientResponse':
+                            json: dict = None) -> 'aiohttp.ClientResponse':
         """Log parameters and execute passed aiohttp method."""
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
@@ -153,7 +153,7 @@ class VeilApiClient:
         return await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl, json=json)
 
     @veil_api_response_decorator
-    async def get(self, url, extra_params: dict = None) -> 'aiohttp.client_reqrep.ClientResponse':
+    async def get(self, url, extra_params: dict = None) -> 'aiohttp.ClientResponse':
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
@@ -164,7 +164,7 @@ class VeilApiClient:
                                         ssl=self.__ssl_enabled)
 
     @veil_api_response_decorator
-    async def post(self, url, json=None) -> 'aiohttp.client_reqrep.ClientResponse':
+    async def post(self, url, json=None) -> 'aiohttp.ClientResponse':
         """Send POST request to VeiL ECP."""
         return await self.__api_request('post', url,
                                         headers=self.__headers,
@@ -173,7 +173,7 @@ class VeilApiClient:
                                         json=json)
 
     @veil_api_response_decorator
-    async def put(self, url, json=None) -> 'aiohttp.client_reqrep.ClientResponse':
+    async def put(self, url, json=None) -> 'aiohttp.ClientResponse':
         """Send PUT request to VeiL ECP."""
         return await self.__api_request('put', url,
                                         headers=self.__headers,

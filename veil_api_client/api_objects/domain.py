@@ -143,14 +143,13 @@ class VeilDomain(VeilApiObject):
         response = await self._client.post(url=url, json=body)
         return response
 
-    async def list(self, with_vdisks: bool = True, paginator: 'VeilRestPaginator' = None) -> 'VeilApiResponse':  # noqa
+    async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None, # noqa
+                   fields: list = None) -> 'VeilApiResponse':  # noqa
         """Get list of data_pools with node_id filter.
 
         By default get only domains with vdisks.
         """
-        # TODO: veil problems. temporary disabled
-        # extra_params = dict(with_vdisks=int(with_vdisks))
-        extra_params = dict()
+        extra_params = dict(with_vdisks=int(with_vdisks))
         if self.cluster_id:
             extra_params['cluster'] = self.cluster_id
         if self.node_id:
@@ -162,5 +161,9 @@ class VeilDomain(VeilApiObject):
         elif isinstance(self.template, bool):
             # ujson can`t work with booleans
             extra_params['template'] = int(self.template)
+        # TODO: фильтр для fields сделать аналогично paginator, чтобы он проверял наличие
+        #  переданных полей в атрибутах сущности?
+        if fields and isinstance(fields, list):
+            extra_params['fields'] = ','.join(fields)
 
         return await super().list(paginator=paginator, extra_params=extra_params)

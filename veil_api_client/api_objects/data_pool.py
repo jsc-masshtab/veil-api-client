@@ -30,7 +30,7 @@ class VeilDataPool(VeilApiObject):
         self.node_id = str(node_id) if node_id else None
         self.cluster_id = str(cluster_id) if cluster_id else None
 
-    async def list(self, paginator: 'VeilRestPaginator' = None) -> 'VeilApiResponse':  # noqa
+    async def list(self, paginator: VeilRestPaginator = None) -> 'VeilApiResponse':  # noqa
         """Get list of data_pools with node_id filter."""
         extra_node_param = {'node': self.node_id} if self.node_id else dict()
         extra_cluster_param = {'cluster': self.cluster_id} if self.cluster_id else dict()

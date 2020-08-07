@@ -62,6 +62,7 @@ class VeilApiObject:
 
     def __init__(self, client, api_object_prefix: str, api_object_id: str = None) -> None:
         """Please see help(VeilApiObject) for more info."""
+        # TODO: нужно иметь возможность указывать ttl
         self.__api_object_prefix = api_object_prefix
         self._client = client
         self.api_object_id = api_object_id
@@ -153,7 +154,7 @@ class VeilApiObject:
         return self.status == self.__STATUS.partial if self.status else False
 
     @argument_type_checker_decorator  # noqa
-    async def list(self, paginator: 'VeilRestPaginator' = None,
+    async def list(self, paginator: VeilRestPaginator = None,
                    extra_params: dict = None) -> 'VeilApiResponse':
         """List all objects of Veil api object class."""
         params = paginator.notnull_attrs if paginator else dict()

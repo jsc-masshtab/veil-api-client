@@ -39,7 +39,7 @@ class VeilNode(VeilApiObject):
         response = await self._client.get(url)
         return response
 
-    async def list(self, paginator: 'VeilRestPaginator' = None) -> 'VeilApiResponse':  # noqa
+    async def list(self, paginator: VeilRestPaginator = None) -> 'VeilApiResponse':  # noqa
         """Get list of nodes with cluster_id filter."""
         extra_params = {'cluster': self.cluster_id} if self.cluster_id else None
         return await super().list(paginator=paginator, extra_params=extra_params)
