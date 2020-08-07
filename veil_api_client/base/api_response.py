@@ -49,6 +49,7 @@ class VeilApiResponse:
             return self.data
 
     # TODO: универсальный метод возвращающий список из 1 или нескольких элементов в зависимости от запроса
+    # TODO: возвращать необходжимо список или 1 объект с сущностью и ее полями
 
 
 def veil_api_response_decorator(func) -> 'VeilApiResponse':

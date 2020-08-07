@@ -7,6 +7,11 @@ try:
 except ImportError:  # pragma: no cover
     ujson = None
 
+try:
+    import pymemcache
+except ImportError:  # pragma: no cover
+    pymemcache = None
+
 from .api_objects.cluster import VeilCluster
 from .api_objects.controller import VeilController
 from .api_objects.data_pool import VeilDataPool
@@ -14,7 +19,9 @@ from .api_objects.domain import VeilDomain
 from .api_objects.node import VeilNode
 from .api_objects.task import VeilTask
 from .api_objects.vdisk import VeilVDisk
+from .base.api_cache import VeilCacheOptions, cached_response_decorator
 from .base.api_client import VeilApiClient
+from .base.api_response import VeilApiResponse
 from .base.descriptors import IntType
 
 
@@ -38,12 +45,18 @@ class VeilClient(VeilApiClient):
     def __init__(self, server_address: str, token: str, ssl_enabled: bool = True, session_reopen: bool = False,
                  timeout: int = 5 * 60,
                  extra_headers: dict = None, extra_params: dict = None, cookies: dict = None,
-                 ujson_: bool = True) -> None:
+                 ujson_: bool = True, cache_opts: VeilCacheOptions = None) -> None:
         """Please see help(VeilClient) for more info."""
-        if ujson is None:
+        if ujson is None and ujson_:
             raise RuntimeError('Please install `ujson`')  # pragma: no cover
+        if pymemcache is None and cache_opts:
+            # TODO: чтобы была возможность использовать другие кеши - нужно изменить условие на более обтекаемое
+            raise RuntimeError('For using cache please install `pymemcache`')  # pragma: no cover
+
         # ujson is much faster but less compatible
         serializer = ujson.dumps if ujson_ else json.dumps
+        # cache options that can be used in request caching decorator
+        self._cache_opts = cache_opts
         super().__init__(server_address=server_address, token=token, transfer_protocol=self.__TRANSFER_PROTOCOL_PREFIX,
                          ssl_enabled=ssl_enabled,
                          session_reopen=session_reopen,
@@ -83,6 +96,11 @@ class VeilClient(VeilApiClient):
         """Return VeilTask entity."""
         return VeilTask(client=self, task_id=task_id)
 
+    @cached_response_decorator
+    async def get(self, url, extra_params: dict = None) -> 'VeilApiResponse':
+        """Get request that could be cached."""
+        return await super().get(url=url, extra_params=extra_params)
+
 
 class VeilClientSingleton:
     """Contains previously initialized clients to minimize sessions on the VeiL controller.
@@ -94,12 +112,13 @@ class VeilClientSingleton:
     __client_instances = dict()
     __TIMEOUT = IntType('__TIMEOUT')
 
-    def __init__(self, timeout: int = 5 * 60) -> None:
+    def __init__(self, timeout: int = 5 * 60, cache_opts: VeilCacheOptions = None) -> None:
         """Please see help(VeilClientSingleton) for more info."""
         self.__TIMEOUT = timeout
+        self.__CACHE_OPTS = cache_opts
 
     def add_client(self, server_address: str, token: str,
-                   timeout: int = None) -> 'VeilClient':
+                   timeout: int = None, cache_opts: VeilCacheOptions = None) -> 'VeilClient':
         """Create new instance of VeilClient if it is not initialized on same address.
 
         Attributes:
@@ -108,9 +127,10 @@ class VeilClientSingleton:
             timeout: aiohttp.ClientSession total timeout.
         """
         _timeout = timeout if timeout else self.__TIMEOUT
+        _cache_opts = cache_opts if cache_opts else self.__CACHE_OPTS
         if server_address not in self.__client_instances:
             instance = VeilClient(server_address=server_address, token=token,
-                                  session_reopen=True, timeout=_timeout, ujson_=True)
+                                  session_reopen=True, timeout=_timeout, ujson_=True, cache_opts=_cache_opts)
             self.__client_instances[server_address] = instance
         return self.__client_instances[server_address]
 

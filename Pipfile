@@ -24,6 +24,7 @@ pytest-aiohttp = "==0.3.0"
 [packages]
 aiohttp = "==3.6.2"
 ujson = "==3.0.0"
+pymemcache = "==3.2"
 
 #[requires]
 #python_version = "3.5"
