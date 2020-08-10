@@ -117,9 +117,11 @@ def cached_response_decorator(func):
 
         # arguments order is fixed
         url = kwargs['url'] if kwargs.get('url') else args[1]
-        params = kwargs['extra_params'] if kwargs.get('extra_params') else args[2]
+        params = kwargs.get('extra_params')
+        if not params and len(args) > 2:
+            params = args[2]
 
-        cache_key = '{}|{}'.format(url, params)
+        cache_key = '{}|{}'.format(url, params) if params else url
         # cache key can`t contain spaces
         cache_key = cache_key.replace(' ', '')
 
