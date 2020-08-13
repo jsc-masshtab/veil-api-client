@@ -15,9 +15,9 @@ class VeilDataPool(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'data-pools/'
 
-    def __init__(self, client, data_pool_id: str = None, node_id: str = None, cluster_id: str = None) -> None:
+    def __init__(self, client, api_object_id: str = None, node_id: str = None, cluster_id: str = None) -> None:
         """Please see help(VeilDataPool) for more info."""
-        super().__init__(client, api_object_id=data_pool_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.description = None
         self.type = None
         self.used_space = None

@@ -10,8 +10,8 @@ try:
 except ImportError:  # pragma: no cover
     aiohttp = None
 
-from .api_response import veil_api_response_decorator
-from .descriptors import NullableDictType, VeilJwtTokenType, VeilUrlStringType
+from .api_cache import cached_response_decorator
+from .utils import NullableDictType, VeilJwtTokenType, VeilUrlStringType, veil_api_response_decorator
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
@@ -141,8 +141,19 @@ class VeilApiClient:
             self.__client_session = self.new_client_session
         return self.__client_session
 
+    @staticmethod
+    async def __fetch_response_data(response: aiohttp.ClientResponse) -> Dict[str, str]:
+        """Collect all response attributes."""
+        if isinstance(response, aiohttp.ClientResponse):
+            # Collect response data
+            async with response:
+                status_code = response.status
+                headers = response.headers
+                data = await response.json()
+            return dict(status_code=status_code, headers=dict(headers), data=data)
+
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
-                            json: dict = None) -> 'aiohttp.ClientResponse':
+                            json: dict = None) -> Dict[str, str]:
         """Log parameters and execute passed aiohttp method."""
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
@@ -150,22 +161,29 @@ class VeilApiClient:
         # determine aiohttp.client method to call
         aiohttp_request_method = getattr(self.__session, method_name)
         # call aiohttp.client method
-        return await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl, json=json)
+        aiohttp_response = await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl, json=json)
+        # fetch response data
+        response_data = await self.__fetch_response_data(aiohttp_response)
+        return response_data
 
     @veil_api_response_decorator
-    async def get(self, url, extra_params: dict = None) -> 'aiohttp.ClientResponse':
+    @cached_response_decorator
+    async def get(self, api_object, url: str,
+                  extra_params: dict = None) -> Dict[str, str]:
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
             params.update(extra_params)
+        logger.debug('%s GET request.', api_object.__class__.__name__)
         return await self.__api_request('get', url,
                                         headers=self.__headers,
                                         params=params,
                                         ssl=self.__ssl_enabled)
 
     @veil_api_response_decorator
-    async def post(self, url, json=None) -> 'aiohttp.ClientResponse':
+    async def post(self, api_object, url: str, json: dict = None) -> Dict[str, str]:
         """Send POST request to VeiL ECP."""
+        logger.debug('%s POST request.', api_object.__class__.__name__)
         return await self.__api_request('post', url,
                                         headers=self.__headers,
                                         params=self.__params,
@@ -173,8 +191,9 @@ class VeilApiClient:
                                         json=json)
 
     @veil_api_response_decorator
-    async def put(self, url, json=None) -> 'aiohttp.ClientResponse':
+    async def put(self, api_object, url: str, json: dict = None) -> Dict[str, str]:
         """Send PUT request to VeiL ECP."""
+        logger.debug('%s PUT request.', api_object.__class__.__name__)
         return await self.__api_request('put', url,
                                         headers=self.__headers,
                                         params=self.__params,

@@ -103,33 +103,33 @@ class TestVeilApiObject:
             raise AssertionError()
 
     def test_api_object_update_public(self, api_object):
-        """Test case for api object _update method."""
+        """Test case for api object update_public_attrs method."""
         attrs_dict = {'status': 'CREATING'}
-        api_object._update(attrs_dict)
+        api_object.update_public_attrs(attrs_dict)
         assert api_object.status == 'CREATING'
 
     def test_api_object_update_private(self, api_object):
-        """Test case for api object _update method."""
+        """Test case for api object update_public_attrs method."""
         attrs_dict = {'_client': 'CREATING'}
-        api_object._update(attrs_dict)
+        api_object.update_public_attrs(attrs_dict)
         assert api_object._client != 'CREATING'
 
     def test_api_object_update_property(self, api_object):
-        """Test case for api object _update method."""
+        """Test case for api object update_public_attrs method."""
         attrs_dict = {'uuid_': 'CREATING'}
-        api_object._update(attrs_dict)
+        api_object.update_public_attrs(attrs_dict)
         assert api_object.uuid_ != 'CREATING'
 
     def test_api_object_update_callable(self, api_object):
-        """Test case for api object _update method."""
+        """Test case for api object update_public_attrs method."""
         attrs_dict = {'info': 'CREATING'}
-        api_object._update(attrs_dict)
+        api_object.update_public_attrs(attrs_dict)
         assert api_object.info != 'CREATING'
 
     def test_api_object_public_attrs(self, api_object):
         """Test case for api object public_attrs method."""
         pub_attrs = api_object.public_attrs
-        assert '_update' not in pub_attrs
+        assert 'update_public_attrs' not in pub_attrs
         assert 'uuid_' in pub_attrs
 
     def test_api_object_creating_property(self, api_object):

@@ -5,6 +5,13 @@ import inspect
 import re
 from uuid import UUID
 
+try:
+    from aiohttp.client_reqrep import ClientResponse
+except ImportError:  # pragma: no cover
+    ClientResponse = None
+
+from .api_response import VeilApiResponse
+
 
 class TypeChecker:
     """Descriptor for type checking."""
@@ -159,4 +166,21 @@ def argument_type_checker_decorator(func):
                         '{kwarg} is not a proper {arg_type}.'.format(kwarg=kwarg, arg_type=kwarg_annotation))
 
         return func(*args, **kwargs)
+    return wrapper
+
+
+def veil_api_response_decorator(func) -> 'VeilApiResponse':
+    """Make VeilApiResponse from aiohttp.response."""
+
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        resp = await func(*args, **kwargs)
+        if isinstance(resp, dict):
+            api_object = kwargs.get('api_object')
+            if not api_object and args and len(args) > 2:
+                api_object = args[1]
+            # Make response object instance
+            return VeilApiResponse(status_code=resp['status_code'], data=resp['data'], headers=resp['headers'],
+                                   api_object=api_object)
+        return resp  # pragma: no cover
     return wrapper
