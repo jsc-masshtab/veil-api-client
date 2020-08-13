@@ -15,9 +15,9 @@ class VeilNode(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'nodes/'
 
-    def __init__(self, client, node_id: str = None, cluster_id: str = None) -> None:
+    def __init__(self, client, api_object_id: str = None, cluster_id: str = None) -> None:
         """Please see help(VeilNode) for more info."""
-        super().__init__(client, api_object_id=node_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.description = None
         self.locked_by = None
         self.created = None
@@ -36,7 +36,7 @@ class VeilNode(VeilApiObject):
     async def usage(self) -> 'VeilApiResponse':
         """Get minimum resource load statistics on a node."""
         url = self.api_object_url + 'usage/'
-        response = await self._client.get(url)
+        response = await self._get(url)
         return response
 
     async def list(self, paginator: VeilRestPaginator = None) -> 'VeilApiResponse':  # noqa

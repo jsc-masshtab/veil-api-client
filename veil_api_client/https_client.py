@@ -19,10 +19,9 @@ from .api_objects.domain import VeilDomain
 from .api_objects.node import VeilNode
 from .api_objects.task import VeilTask
 from .api_objects.vdisk import VeilVDisk
-from .base.api_cache import VeilCacheOptions, cached_response_decorator
+from .base.api_cache import VeilCacheOptions
 from .base.api_client import VeilApiClient
-from .base.api_response import VeilApiResponse
-from .base.descriptors import IntType
+from .base.utils import IntType
 
 
 class VeilClient(VeilApiClient):
@@ -69,37 +68,33 @@ class VeilClient(VeilApiClient):
     def domain(self, domain_id: str = None, cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
                template: bool = None) -> 'VeilDomain':
         """Return VeilDomain entity."""
-        return VeilDomain(client=self, template=template, domain_id=domain_id, cluster_id=cluster_id, node_id=node_id,
+        return VeilDomain(client=self, template=template, api_object_id=domain_id, cluster_id=cluster_id,
+                          node_id=node_id,
                           data_pool_id=data_pool_id)
 
     def controller(self, controller_id: str = None) -> 'VeilController':
         """Return VeilController entity."""
-        return VeilController(client=self, controller_id=controller_id)
+        return VeilController(client=self, api_object_id=controller_id)
 
     def cluster(self, cluster_id: str = None) -> 'VeilCluster':
         """Return VeilCluster entity."""
-        return VeilCluster(client=self, cluster_id=cluster_id)
+        return VeilCluster(client=self, api_object_id=cluster_id)
 
     def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None) -> 'VeilDataPool':
         """Return VeilDataPool entity."""
-        return VeilDataPool(client=self, data_pool_id=data_pool_id, node_id=node_id, cluster_id=cluster_id)
+        return VeilDataPool(client=self, api_object_id=data_pool_id, node_id=node_id, cluster_id=cluster_id)
 
     def node(self, node_id: str = None, cluster_id: str = None) -> 'VeilNode':
         """Return VeilNode entity."""
-        return VeilNode(client=self, node_id=node_id, cluster_id=cluster_id)
+        return VeilNode(client=self, api_object_id=node_id, cluster_id=cluster_id)
 
     def vdisk(self, vdisk_id: str = None) -> 'VeilVDisk':
         """Return VeilVDisk entity."""
-        return VeilVDisk(client=self, vdisk_id=vdisk_id)
+        return VeilVDisk(client=self, api_object_id=vdisk_id)
 
     def task(self, task_id: str = None) -> 'VeilTask':
         """Return VeilTask entity."""
-        return VeilTask(client=self, task_id=task_id)
-
-    @cached_response_decorator
-    async def get(self, url, extra_params: dict = None) -> 'VeilApiResponse':
-        """Get request that could be cached."""
-        return await super().get(url=url, extra_params=extra_params)
+        return VeilTask(client=self, api_object_id=task_id)
 
 
 class VeilClientSingleton:

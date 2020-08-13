@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil api response."""
-import functools
 import logging
-
-from aiohttp.client_reqrep import ClientResponse
 
 logger = logging.getLogger('veil-api-client.response')
 logger.addHandler(logging.NullHandler())
@@ -21,11 +18,14 @@ class VeilApiResponse:
         paginator_results: value of results key from response data. May presents only in list() queries.
     """
 
-    def __init__(self, status_code, data, headers) -> None:
+    __SUCCESS_STATUSES = frozenset((200, 201, 202, 204))
+
+    def __init__(self, status_code, data, headers, api_object) -> None:
         """Please see help(VeilApiResponse) for more info."""
         self.status_code = status_code
         self.data = data
         self.headers = headers
+        self.__api_object = api_object
         if status_code != 200:
             logger.warning('request status code is %s', status_code)
         logger.debug('response data: %s', data)
@@ -48,21 +48,29 @@ class VeilApiResponse:
         else:
             return self.data
 
-    # TODO: универсальный метод возвращающий список из 1 или нескольких элементов в зависимости от запроса
-    # TODO: возвращать необходжимо список или 1 объект с сущностью и ее полями
+    @property
+    def response(self) -> list:
+        """List with calling VeilApiObject entities instances.
 
+        1. Determine calling VeilApiObject instance to copy.
+        2. Determine response type (paginator or info).
+        3. Return list with 1-M elements.
+        :return:
+        """
+        api_object_list = list()
+        if self.__api_object:
+            if self.paginator_results:
+                for result in self.paginator_results:
+                    inst = self.__api_object.copy()
+                    inst.update_public_attrs(result)
+                    api_object_list.append(inst)
+            else:
+                inst = self.__api_object.copy()
+                inst.update_public_attrs(self.value)
+                api_object_list.append(inst)
+        return api_object_list
 
-def veil_api_response_decorator(func) -> 'VeilApiResponse':
-    """Make VeilApiResponse from aiohttp.response."""
-
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        resp = await func(*args, **kwargs)
-        if isinstance(resp, ClientResponse):
-            async with resp:
-                status_code = resp.status
-                headers = resp.headers
-                data = await resp.json()
-            return VeilApiResponse(status_code=status_code, data=data, headers=headers)
-        return resp  # pragma: no cover
-    return wrapper
+    @property
+    def success(self) -> bool:
+        """Determine that requests response goes well."""
+        return self.status_code in self.__SUCCESS_STATUSES

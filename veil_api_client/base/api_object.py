@@ -2,10 +2,14 @@
 """Base api object."""
 from uuid import UUID
 
+try:
+    from aiohttp import ClientResponse
+except ImportError:  # pragma: no cover
+    ClientResponse = None
+
 from .api_client import VeilApiClient
-from .api_response import VeilApiResponse
-from .descriptors import (NullableIntType, NullableStringType,
-                          TypeChecker, UuidStringType, argument_type_checker_decorator)
+from .utils import (NullableIntType, NullableStringType,
+                    TypeChecker, UuidStringType, argument_type_checker_decorator)
 
 
 class VeilRestPaginator:
@@ -60,7 +64,7 @@ class VeilApiObject:
         service = 'SERVICE'
         partial = 'PARTIAL'
 
-    def __init__(self, client, api_object_prefix: str, api_object_id: str = None) -> None:
+    def __init__(self, client: VeilApiClient, api_object_prefix: str, api_object_id: str = None) -> None:
         """Please see help(VeilApiObject) for more info."""
         # TODO: нужно иметь возможность указывать ttl
         self.__api_object_prefix = api_object_prefix
@@ -69,7 +73,7 @@ class VeilApiObject:
         self.status = None
         self.verbose_name = None
 
-    def _update(self, attrs_dict: dict) -> None:
+    def update_public_attrs(self, attrs_dict: dict) -> None:
         """Update public class attributes ignoring property."""
         for attr in attrs_dict:
             if attr.startswith('_'):
@@ -81,6 +85,24 @@ class VeilApiObject:
             if attr in self.public_attrs and isinstance(self.public_attrs[attr], property):
                 continue
             self.__setattr__(attr, attrs_dict[attr])
+
+    def copy(self):
+        """Return new class instance with preconfigured parameters."""
+        # return VeilApiObject(client=self._client, api_object_prefix=self.__api_object_prefix,
+        #                      api_object_id=self.api_object_id)
+        return self.__class__(client=self._client, api_object_id=self.api_object_id)
+
+    async def _get(self, url: str, extra_params: dict = None) -> 'ClientResponse':
+        """Layer for calling a client GET method."""
+        return await self._client.get(api_object=self, url=url, extra_params=extra_params)
+
+    async def _post(self, url: str, json: dict = None) -> 'ClientResponse':
+        """Layer for calling a client POST method."""
+        return await self._client.post(api_object=self, url=url, json=json)
+
+    async def _put(self, url: str, json: dict = None) -> 'ClientResponse':
+        """Layer for calling a client PUT method."""
+        return await self._client.put(api_object=self, url=url, json=json)
 
     @property
     def public_attrs(self) -> dict:
@@ -155,16 +177,16 @@ class VeilApiObject:
 
     @argument_type_checker_decorator  # noqa
     async def list(self, paginator: VeilRestPaginator = None,
-                   extra_params: dict = None) -> 'VeilApiResponse':
+                   extra_params: dict = None):
         """List all objects of Veil api object class."""
         params = paginator.notnull_attrs if paginator else dict()
         if extra_params:
             params.update(extra_params)
-        return await self._client.get(self.base_url, extra_params=params)
+        return await self._get(self.base_url, extra_params=params)
 
-    async def info(self) -> 'VeilApiResponse':
+    async def info(self):
         """Get api object instance and update public attrs."""
-        response = await self._client.get(self.api_object_url)
+        response = await self._get(self.api_object_url)
         if response.status_code == 200 and response.data:
-            self._update(response.data)
+            self.update_public_attrs(response.data)
         return response

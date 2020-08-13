@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil api cache drivers."""
 import functools
+import inspect
 import json
 import logging
 from enum import Enum
@@ -11,10 +12,7 @@ try:
 except ImportError:  # pragma: no cover
     MemcachedClient = None
 
-from .api_client import VeilApiClient
-from .api_response import VeilApiResponse
-from .descriptors import IntType
-
+from .utils import IntType
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
@@ -61,28 +59,21 @@ class DictSerde:
     """Veil api response serializer for memcached."""
 
     @staticmethod
-    def serialize(key, value):
+    def serialize(key, value):  # noqa
         """Serialize VeilApiResponse to bytes."""
         if isinstance(value, str):
             return value.encode('utf-8'), 1
-        elif isinstance(value, VeilApiResponse):
-            response_data = {'data': value.data, 'status_code': value.status_code,
-                             'headers': dict(value.headers),
-                             }
-            return json.dumps(response_data).encode('utf-8'), 3
-        return json.dumps(value).encode('utf-8'), 2
+        elif isinstance(value, dict):
+            return json.dumps(value).encode('utf-8'), 2
+        raise Exception('Unknown serialization format')
 
     @staticmethod
-    def deserialize(key, value, flags):
-        """Deserialize bytes to VeilApiResponse."""
+    def deserialize(key, value, flags):  # noqa
+        """Deserialize bytes to dict."""
         if flags == 1:
             return value.decode('utf-8')
         elif flags == 2:
             return json.loads(value.decode('utf-8'))
-        elif flags == 3:
-            response_data = json.loads(value.decode('utf-8'))
-            return VeilApiResponse(status_code=response_data['status_code'], data=response_data['data'],
-                                   headers=response_data['headers'])
         raise Exception('Unknown serialization format')
 
 
@@ -98,14 +89,8 @@ def cached_response_decorator(func):
         # TODO: use PooledClient
         # TODO: best practices from https://pymemcache.readthedocs.io/en/latest/getting_started.html
 
-        # print('args:', args)
-        # print('kwargs:', kwargs)
-        # print('args:', args)
-        # print(args[0]._cache_opts)
-        # TODO: проверить через синглтон клиент
-
         # first element in args must be VeilClient instance
-        if not args or not isinstance(args[0], VeilApiClient):
+        if not args or not inspect.isclass(args[0]) or not args[0].__class__.__name__ == 'VeilClient':
             return await func(*args, **kwargs)
 
         cache_opts = args[0]._cache_opts  # noqa
@@ -129,7 +114,8 @@ def cached_response_decorator(func):
         if not result:
             result = await func(*args, **kwargs)
             # TODO: более явно перечислить статусы успеха на veil
-            if result.status_code in (200, 201, 202, 204):
+            if result['status_code'] in (200, 201, 202, 204):
+                logger.debug('save %s response to cache', url)
                 # save request response to cache
                 client.set(cache_key, result, expire=cache_opts.ttl)
         else:

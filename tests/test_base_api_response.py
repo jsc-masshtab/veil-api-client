@@ -4,7 +4,8 @@ from aiohttp import web
 
 import pytest
 
-from veil_api_client.base.api_response import VeilApiResponse, veil_api_response_decorator
+from veil_api_client.base.api_response import VeilApiResponse
+from veil_api_client.base.utils import veil_api_response_decorator
 
 
 pytestmark = [pytest.mark.base]
@@ -16,7 +17,7 @@ class TestVeilApiResponse:
     def test_init(self):
         """Veil api response init test case."""
         try:
-            obj = VeilApiResponse(status_code=200, data=None, headers=None)
+            obj = VeilApiResponse(status_code=200, data=None, headers=None, api_object=None)
         except TypeError:
             raise AssertionError()
         else:
@@ -37,10 +38,20 @@ class TestVeilApiResponse:
             status=401)
 
     @staticmethod
+    async def __fetch_response_data(response):
+        """Collect all response attributes."""
+        # Collect response data
+        async with response:
+            status_code = response.status
+            headers = response.headers
+            data = await response.json()
+        return dict(status_code=status_code, headers=dict(headers), data=data)
+
     @veil_api_response_decorator
-    async def client_response(client):
+    async def client_response(self, client):
         """Response from fake server converted by veil_api_response_decorator."""
-        return await client.get('/')
+        raw_response = await client.get('/')
+        return await self.__fetch_response_data(raw_response)
 
     async def test_api_response_200(self, aiohttp_raw_server, aiohttp_client):
         """Test Veil response 200 converter."""

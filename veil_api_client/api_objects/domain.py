@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
+
+from enum import Enum
+
 from ..base.api_object import VeilApiObject, VeilRestPaginator
 from ..base.api_response import VeilApiResponse
-from ..base.descriptors import BoolType, StringType, UuidStringType, argument_type_checker_decorator
+from ..base.utils import BoolType, StringType, UuidStringType, argument_type_checker_decorator
 
 
 class DomainConfiguration:
@@ -33,12 +36,24 @@ class DomainConfiguration:
         self.thin = thin
 
 
+class MultiManagerAction(Enum):
+    """Possible options for VeiL multi-manager."""
+
+    START = 'start'
+    SHUTDOWN = 'shutdown'
+    SUSPEND = 'suspend'
+    REBOOT = 'reboot'
+    RESUME = 'resume'
+    DELETE = 'delete'
+    MIGRATE = 'migrate'
+
+
 class VeilDomain(VeilApiObject):
     """Veil domain entity.
 
     Attributes:
         client: https_client instance.
-        domain_id: VeiL domain id(uuid).
+        api_object_id: VeiL domain id(uuid).
         cluster_id:  node_id: VeiL cluster id(uuid) for extra filtering.
         node_id:  node_id: VeiL node id(uuid) for extra filtering.
         data_pool_id:  node_id: VeiL data-pool id(uuid) for extra filtering.
@@ -47,14 +62,14 @@ class VeilDomain(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'domains/'
 
-    def __init__(self, client, domain_id: str = None, cluster_id: str = None, node_id: str = None,
+    def __init__(self, client, api_object_id: str = None, cluster_id: str = None, node_id: str = None,
                  data_pool_id: str = None, template: int = None) -> None:
         """Please see help(VeilDomain) for more info.
 
         Arguments:
             template: Boolean int (0|1).
         """
-        super().__init__(client, api_object_id=domain_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.remote_access = None
         self.verbose_name = None
         self.node = None
@@ -76,49 +91,49 @@ class VeilDomain(VeilApiObject):
         """Send domain action 'start'."""
         url = self.action_url('start/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def reboot(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'reboot'."""
         url = self.action_url('reboot/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def suspend(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'suspend'."""
         url = self.action_url('suspend/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def reset(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'reset'."""
         url = self.action_url('reset/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def shutdown(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'shutdown'."""
         url = self.action_url('shutdown/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def resume(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'resume'."""
         url = self.action_url('resume/')
         body = dict(force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def remote_access_action(self, enable: bool = True) -> 'VeilApiResponse':
         """Send domain action 'remote-action'."""
         url = self.api_object_url + 'remote-access/'
         body = dict(remote_access=enable)
-        response = await self._client.post(url, json=body)
+        response = await self._post(url, json=body)
         return response
 
     async def enable_remote_access(self) -> 'VeilApiResponse':
@@ -133,14 +148,14 @@ class VeilDomain(VeilApiObject):
     async def create(self, domain_configuration: DomainConfiguration) -> 'VeilApiResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
-        response = await self._client.post(url=url, json=domain_configuration.__dict__)
+        response = await self._post(url=url, json=domain_configuration.__dict__)
         return response
 
     async def remove(self, full: bool = True, force: bool = False) -> 'VeilApiResponse':
         """Remove domain instance on VeiL ECP."""
-        url = self.api_object_url + 'remove/'
+        url = self.action_url('remove/')
         body = dict(full=full, force=force)
-        response = await self._client.post(url=url, json=body)
+        response = await self._post(url=url, json=body)
         return response
 
     async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None, # noqa
@@ -167,3 +182,56 @@ class VeilDomain(VeilApiObject):
             extra_params['fields'] = ','.join(fields)
 
         return await super().list(paginator=paginator, extra_params=extra_params)
+
+    async def __multi_manager(self, action: MultiManagerAction, entity_ids: list, full: bool,
+                              force: bool) -> 'VeilApiResponse':
+        """Multi manager with action.
+
+        Possible actions:
+            start
+            shutdown
+            suspend
+            reboot
+            resume
+            delete
+            migrate
+        """
+        url = self.base_url + 'multi-manager/'
+        body = dict(full=full, force=force, entity_ids=entity_ids, action=action.value)
+        response = await self._post(url=url, json=body)
+        return response
+
+    async def multi_start(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi start domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.START, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_shutdown(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi shutdown domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.SHUTDOWN, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_suspend(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi suspend domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.SUSPEND, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_reboot(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi reboot domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.REBOOT, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_resume(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi resume domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.RESUME, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_remove(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi remove domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.DELETE, entity_ids=entity_ids, full=full,
+                                          force=force)
+
+    async def multi_migrate(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+        """Multi migrate domain instance on VeiL ECP."""
+        return await self.__multi_manager(action=MultiManagerAction.MIGRATE, entity_ids=entity_ids, full=full,
+                                          force=force)

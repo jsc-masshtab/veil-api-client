@@ -2,7 +2,7 @@
 """Descriptor test cases."""
 import pytest
 
-from veil_api_client.base import descriptors
+from veil_api_client.base import utils
 
 pytestmark = [pytest.mark.base]
 
@@ -15,19 +15,19 @@ class TestAttributeDescriptors:
         """Test mock values."""
 
         class TemporaryClass:
-            tuple_type = descriptors.TypeChecker('unknown_type', tuple)
-            str_type = descriptors.StringType('str_type')
-            bool_type = descriptors.BoolType('bool_type')
-            nullable_str_type = descriptors.NullableStringType('nullable_str_type')
-            int_type = descriptors.IntType('int_type')
-            nullable_int_type = descriptors.NullableIntType('nullable_int_type')
-            dict_type = descriptors.DictType('dict_type')
-            nullable_dict_type = descriptors.NullableDictType('nullable_dict_type')
-            veil_jwt_token_type = descriptors.VeilJwtTokenType('veil_jwt_token_type')
-            veil_url_string_type = descriptors.VeilUrlStringType('veil_url_string_type')
-            uuid_string_type = descriptors.UuidStringType('uuid_string_type')
+            tuple_type = utils.TypeChecker('unknown_type', tuple)
+            str_type = utils.StringType('str_type')
+            bool_type = utils.BoolType('bool_type')
+            nullable_str_type = utils.NullableStringType('nullable_str_type')
+            int_type = utils.IntType('int_type')
+            nullable_int_type = utils.NullableIntType('nullable_int_type')
+            dict_type = utils.DictType('dict_type')
+            nullable_dict_type = utils.NullableDictType('nullable_dict_type')
+            veil_jwt_token_type = utils.VeilJwtTokenType('veil_jwt_token_type')
+            veil_url_string_type = utils.VeilUrlStringType('veil_url_string_type')
+            uuid_string_type = utils.UuidStringType('uuid_string_type')
 
-            @descriptors.argument_type_checker_decorator
+            @utils.argument_type_checker_decorator
             def annotated(self, val: str = None):
                 pass
 

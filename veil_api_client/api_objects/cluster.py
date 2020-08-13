@@ -14,9 +14,9 @@ class VeilCluster(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'clusters/'
 
-    def __init__(self, client, cluster_id: str = None) -> None:
+    def __init__(self, client, api_object_id: str = None) -> None:
         """Please see help(VeilCluster) for more info."""
-        super().__init__(client, api_object_id=cluster_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.cpu_count = None
         self.created = None
         self.description = None
@@ -26,5 +26,5 @@ class VeilCluster(VeilApiObject):
     async def usage(self) -> 'VeilApiResponse':
         """Get minimum statistics of resource loading."""
         url = self.api_object_url + 'usage/'
-        response = await self._client.get(url)
+        response = await self._get(url)
         return response
