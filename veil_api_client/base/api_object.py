@@ -8,6 +8,7 @@ except ImportError:  # pragma: no cover
     ClientResponse = None
 
 from .api_client import VeilApiClient
+from .api_response import VeilApiResponse
 from .utils import (NullableIntType, NullableStringType,
                     TypeChecker, UuidStringType, argument_type_checker_decorator)
 
@@ -80,6 +81,10 @@ class VeilApiObject:
                 continue
             if hasattr(self.__class__, attr) and callable(getattr(self.__class__, attr)):
                 continue
+            if attr == 'id':
+                # id not in public attrs, but we need to set api_object_id if it`s not set earlier.
+                self.__setattr__('api_object_id', attrs_dict[attr])
+                continue
             if attr not in self.public_attrs:
                 continue
             if attr in self.public_attrs and isinstance(self.public_attrs[attr], property):
@@ -88,8 +93,6 @@ class VeilApiObject:
 
     def copy(self):
         """Return new class instance with preconfigured parameters."""
-        # return VeilApiObject(client=self._client, api_object_prefix=self.__api_object_prefix,
-        #                      api_object_id=self.api_object_id)
         return self.__class__(client=self._client, api_object_id=self.api_object_id)
 
     async def _get(self, url: str, extra_params: dict = None) -> 'ClientResponse':
@@ -119,6 +122,11 @@ class VeilApiObject:
                 attr_value = self.__getattribute__(attr)
             result_dict[attr] = attr_value
         return result_dict
+
+    @property
+    def task(self):
+        """VeilTask entity with same client as ApiObject."""
+        return VeilTask(client=self._client)
 
     @property
     def uuid_(self) -> UUID:
@@ -190,3 +198,78 @@ class VeilApiObject:
         if response.status_code == 200 and response.data:
             self.update_public_attrs(response.data)
         return response
+
+
+class VeilTask(VeilApiObject):
+    """Veil task entity.
+
+    All requests sent with async=1 will be async task. Here are methods for VeiL
+    tasks checking.
+
+    Attributes:
+        client: https_client instance.
+        api_object_id: VeiL task id(uuid).
+    """
+
+    __API_OBJECT_PREFIX = 'tasks/'
+    task = None
+
+    def __init__(self, client, api_object_id: str = None) -> None:
+        """Please see help(VeilTask) for more info."""
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        self.is_cancellable = None
+        self.is_multitask = None
+        self.progress = None
+        self.error_message = None
+        self.executed = None
+        self.created = None
+        self.name = None
+        self.detail_message = None
+        self.entities = None
+
+    async def check(self) -> 'VeilApiResponse':
+        """All tasks completion endpoint.
+
+        Probably don`t need."""
+        url = self.base_url + 'check/'
+        response = await self._put(url)
+        return response
+
+    async def count(self) -> 'VeilApiResponse':
+        """Task counters endpoint."""
+        url = self.base_url + 'count/'
+        response = await self._get(url)
+        return response
+
+    async def cancel(self) -> 'VeilApiResponse':
+        """Exit tasks endpoint."""
+        url = self.api_object_url + 'cancel/'
+        response = await self._put(url)
+        return response
+
+    async def jid(self) -> 'VeilApiResponse':
+        """Endpoint of receiving jid of a separate task."""
+        url = self.api_object_url + 'jid/'
+        response = await self._get(url)
+        return response
+
+    async def release_locks(self) -> 'VeilApiResponse':
+        """Endpoint to reset locks from tasks."""
+        url = self.api_object_url + 'release-locks/'
+        response = await self._put(url)
+        return response
+
+    async def response(self) -> 'VeilApiResponse':
+        """Endpoint of receiving a response from the node."""
+        url = self.api_object_url + 'response/'
+        response = await self._get(url)
+        return response
+
+    @property
+    async def completed(self) -> bool:
+        """Check that task is completed."""
+        # url = self.api_object_id
+        # extra_params = {'fields': 'status'}
+        # response = await self._get(url, extra_params=extra_params)
+        await self.info()
+        return self.status == 'SUCCESS'

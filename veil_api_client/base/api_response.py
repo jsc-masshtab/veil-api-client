@@ -26,7 +26,7 @@ class VeilApiResponse:
         self.data = data
         self.headers = headers
         self.__api_object = api_object
-        if status_code != 200:
+        if status_code not in (200, 202):
             logger.warning('request status code is %s', status_code)
         logger.debug('response data: %s', data)
 
@@ -69,6 +69,16 @@ class VeilApiResponse:
                 inst.update_public_attrs(self.value)
                 api_object_list.append(inst)
         return api_object_list
+
+    @property
+    def task(self):
+        """Return VeilTask if response is 202."""
+        # TODO: Task in return annotation
+        if self.status_code != 202 or not isinstance(self.data, dict) or not self.data.get('_task'):
+            return
+        task_inst = self.__api_object.task
+        task_inst.update_public_attrs(self.data['_task'])
+        return task_inst
 
     @property
     def success(self) -> bool:
