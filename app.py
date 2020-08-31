@@ -2,9 +2,11 @@
 """Temporary runner."""
 import asyncio
 import uvloop
+from enum import IntEnum
 
-from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, VeilCacheOptions, DomainConfiguration
+from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, VeilCacheOptions, DomainConfiguration, VeilGuestAgentCmd
 
+# TODO: побороть кривые импорты
 # TODO: tests - доработать по отчету coverage
 # TODO: api_object_prefix - в README указать, что это путь к сущности на ECP
 # TODO: description - документация
@@ -12,121 +14,86 @@ from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, 
 # TODO: описать как подключить собственный кеш на примере redis?
 
 
+class VmPowerState(IntEnum):
+    """Veil domain power states."""
+
+    UNDEFINED = 0
+    OFF = 1
+    SUSPENDED = 2
+    ON = 3
+
+
 async def main():
     """Примеры использования."""
-    token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNjUsInVzZXJuYW1lIjoiYXBpLWNsaSIsImV4cCI6MTkwODI2MjI1Niwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE1OTM3NjYyNTZ9._41CVXezP1vDHoZyQ71UcadqPdti7-tmy_teEjfBgio'
+    token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMzUsInVzZXJuYW1lIjoiZGV2eWF0a2luIiwiZXhwIjoxOTEyNzcwMTYzLCJzc28iOmZhbHNlLCJvcmlnX2lhdCI6MTU5ODI3NDE2M30.YQAWEy7Ip0XedU1e4rC9Ijv8O8LUYUlhRJ3T3vhZdRI'
     server1 = '192.168.11.115'
-    cache_options = VeilCacheOptions(ttl=10, cache_type='memcached', server=('localhost', 11211))
+    rdp = True
+    # cache_options = VeilCacheOptions(ttl=10, cache_type='memcached', server=('localhost', 11211))
     async with VeilClient(server1, token1, cache_opts=None) as veil_single:
-        # domains_list_response = await veil_single.domain('06bb682f-672a-40ef-aff8-cb43dfe9d4f2').info()
-        # if domains_list_response.success:
-        #     print('request is successfull')
-        #     print('response_data_object:', domains_list_response.response[0])
-        #     print('response_data_object_template:', domains_list_response.response[0].template)
-        #     print('response_data_dict:', domains_list_response.value)
-        #     print('response_data_list:', domains_list_response.paginator_results)
-        # else:
-        #     print('request has error')
+        domain_client = veil_single.domain('eee8dc66-7139-4cd2-8df5-966be5bfaab0')
+        # Получаем состояние параметров ВМ
+        domain_response = await domain_client.info()
+        print('domain response:', domain_response)
+        print('domain response status:', domain_response.status_code)
+        # Получаем сущность ВМ из ответа
+        domain_entity = domain_response.response[0]
+
+        # print('remote access = ', domain_entity.remote_access)
+        # # Проверяем настройки удаленного доступа
+        # if not domain_entity.remote_access:
+        #     action_response = await domain_client.enable_remote_access()
+        #     action_task = action_response.task
+        #     task_completed = False
+        #     while not task_completed:
+        #         print('Задача еще не выполнена. Ждем 5 сек.')
+        #         await asyncio.sleep(5)
+        #         task_completed = await action_task.completed
+        #     print('Зачада выполнена.')
+        #     print('Обновляем параметры ВМ')
+        #     await domain_entity.info()
         #
-        # clusters_list_response = await veil_single.cluster().list()
-        # if clusters_list_response.success:
-        #     print('request is successfull')
-        #     for cluster in clusters_list_response.response:
-        #         print('response_data_object name:', cluster.verbose_name)
-        #     print('response_data_dict:', clusters_list_response.value)
-        #     print('response_data_list:', clusters_list_response.paginator_results)
-        # else:
-        #     print('request has error')
+        # # Проверяем включена ли ВМ
+        # print('Domain power state:', domain_entity.power_state)
+        # if not domain_entity.power_state == VmPowerState.ON:
+        #     print('ВМ выключена - нужно ее включить.')
+        #     action_response = await domain_entity.start()
+        #     action_task = action_response.task
+        #     task_completed = False
+        #     while not task_completed:
+        #         print('Задача включения ВМ еще не выполнена. Ждем 3 сек.')
+        #         await asyncio.sleep(3)
+        #         task_completed = await action_task.completed
+        #     print('Зачада выполнена.')
+        #     print('Обновляем параметры ВМ')
+        #     await domain_entity.info()
         #
-        # domain = veil_single.domain()
-        # domain_configuration = DomainConfiguration(verbose_name='',
-        #                                            parent='9a4aa3e4-29b6-448e-b779-4380e7736e2f',
-        #                                            node='6edf3154-10c3-431d-adbc-234d04301b6f',
-        #                                            datapool='f7c2aa60-390d-4fe6-b4ac-015a9b73a244'
-        #                                            )
+        # # Ожидаем доступности гостевого агента.
+        # while not domain_entity.guest_agent.qemu_state:
+        #     await asyncio.sleep(5)
+        #     await domain_entity.info()
+        #     print('Гостевой агент недоступен. Ждем еще.')
         #
-        # create_response = await domain.create(domain_configuration)
-        # print('create response:', create_response)
-        # print(create_response.success)
-        # print(create_response.response)
-        # print(create_response.value)
-        # # TODO: добавить на VDI обработку неправильного кода, сейчас {'errors': [{'domain': "The domain doesn't exist with the id 9a4aa3e4-29b6-448e-b779-4380e7736e2f", 'code': 'invalid'}]}
-        # print(create_response.data)
-        domain_client = veil_single.domain()
-        multi_remove_response = await domain_client.multi_remove(entity_ids=["b3498951-290b-4430-84e7-28c2f4dd315b"])
-        print(multi_remove_response)
-        # print(create_response.status_code)
-        # print(create_response.data)
+        # # Для подключения по rdp ВМ нужен как минимум 1 ip-адрес
+        # while rdp or not domain_entity.guest_agent.first_ipv4_ip:
+        #     await asyncio.sleep(10)
+        #     await domain_entity.info()
+        #     print('IP-адрес не найден. Ожидаем.')
+        #
+        # print('IP:', domain_entity.guest_agent.first_ipv4_ip)
+        #
+        # # Задание hostname
+        # action_response = await domain_entity.set_hostname()
+        # action_task = action_response.task
+        # task_completed = False
+        # while not task_completed:
+        #     print('Задача задания hostname ВМ еще не выполнена. Ждем 5 сек.')
+        #     await asyncio.sleep(5)
+        #     task_completed = await action_task.completed
 
-        # for domain in domains_list.response:
-        #     print(domain.status)
-        # print('-----------')
-        # for domain in domains_list.paginator_results:
-        #     print(domain.get('id'))
-        # for domain in domains_list.paginator_results:
-        #     print(domain)
-        # domains_list = await veil_single.domain().list()
-        # print('domains list:', domains_list.data)
-        # for domain in domains_list.paginator_results:
-        #     print('domain:', domain)
-        #     print('parent:', domain.get('parent'))
-        # print('domains list:', domains_list.data)
-        # domains_list = await veil_single.domain('6d45f973-402e-4936-9c7e-195bcba94351').info()
-        # print('domains list:', domains_list.data)
-        # domains_list = await veil_single.domain('6d45f973-402e-4936-9c7e-195bcba94331').info()
-        # print('domains list:', domains_list.data)
-
-    # Инициализируем класс для работы с клиентами
-    # veil_client = VeilClientSingleton(cache_opts=cache_options)
-    # Добавляем подключение к первому контроллеру
-    # session1 = veil_client.add_client(server1, token1)
-    # domains_list_response = await session1.domain().list()
-    # Добавляем еще одно подключение к контроллеру
-    # В результате у session2 будет ссылка на тот же клиент, что передан для session
-    # session2 = veil_client.add_client(server1, token1)
-    # Устанавливаем соединение с еще одним контроллером
-    # session2 = veil_client.add_client(server2, token2)
-    # domains_list_response2 = await session2.domain().list()
-    # Удаляем существующую сессию для контроллера, давая возможность изменить ему настройки
-    # await veil_client.remove_client(server1)
-    # ...
-    # Перед завершением приложения закрываем все используемые сессии
-    # instances = veil_client.instances
-    # for instance in instances:
-    #     await instances[instance].close()
-    # async with VeilClient(server_address=server_address_102, token=token_102, session_reopen=True,
-    #                       ujson_=False, timeout=5) as session:
-    #     domains_list_response = await session.domain().list()
-    #     print('domain status: {}'.format(domains_list_response.status_code))
-    #     print('domain data: {}'.format(domains_list_response.data))
-    #     print('domain header: {}'.format(domains_list_response.headers))
-
-    # print('Session 1 is closed.')
-    # del session
-    # session_obj = VeilClient(server_address=server_address_115, token=token_115, ssl_enabled=False,
-    #                          extra_params={'async': 1},
-    #                          timeout=2, session_reopen=False)
-    #
-    # domain = session_obj.domain()
-    # domain_configuration = DomainConfiguration(verbose_name='cli2-tst',
-    #                                            parent='9a4aa3e4-29b6-448e-b779-4380e7736e2f',
-    #                                            node='6edf3154-10c3-431d-adbc-234d04301b6f',
-    #                                            datapool='f7c2aa60-390d-4fe6-b4ac-015a9b73a244'
-    #                                            )
-    # create_response = await domain.create(domain_configuration)
-    # print(create_response.status_code)
-    # print(create_response.data)
-    # #
-    # await session_obj.close()
-    # print('Session 2 is closed.')
-    #
-    # create_response = await domain.create(domain_configuration)
-    # print(create_response.status_code)
-    # print(create_response.data)
-    #
-    # await session_obj.close()
-    # print('Session 3 is closed.')
-
+        # Заведение в домен
+        print('Заведение в домен.')
+        response = await domain_entity.guest_command(veil_cmd=VeilGuestAgentCmd.MEMORY_STATS)
+        print('response:', response.data)
 
 uvloop.install()
 loop = asyncio.get_event_loop()

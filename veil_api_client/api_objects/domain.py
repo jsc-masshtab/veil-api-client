@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
 
-from enum import Enum
+from enum import Enum, IntEnum
 
 from ..base.api_object import VeilApiObject, VeilRestPaginator
 from ..base.api_response import VeilApiResponse
@@ -48,6 +48,57 @@ class MultiManagerAction(Enum):
     MIGRATE = 'migrate'
 
 
+class DomainPowerState(IntEnum):
+    """Veil domain power states."""
+
+    UNDEFINED = 0
+    OFF = 1
+    SUSPENDED = 2
+    ON = 3
+
+
+class VeilGuestAgentCmd(Enum):
+    """Veil guest agent commands."""
+
+    LOCK_SCREEN = 'lock_screen'
+    LOGOFF = 'logoff'
+    SHUTDOWN = 'shutdown'
+    LOGIN = 'login'
+    HIBERNATE = 'hibernate'
+    SET_NUMBER_OF_CPUS = 'set_number_of_cpus'
+    ECHO = 'echo'
+    LIFECYCLE_EVENT = 'lifecycle_event'
+    MEMORY_STATS = 'memory_stats'
+    DISK_USAGES = 'disk_usages'
+    FREE_RAM = 'free_ram'
+    API_VERSION = 'api_version'
+    FQDN = 'fqdn'
+    USER_INFO = 'user_info'
+    TIMEZONE = 'timezone'
+    INFO = 'info'
+    OS_INFO = 'os_info'
+    APP_LIST = 'app_list'
+
+
+class DomainGuestUtils:
+
+    def __init__(self, veil_state: bool = False, qemu_state: bool = False, version: str = None, hostname: str = None,
+                 ipv4: list = None) -> None:
+        self.veil_state = veil_state
+        self.qemu_state = qemu_state
+        self.version = version
+        self.hostname = hostname
+        self.ipv4 = ipv4
+
+    @property
+    def first_ipv4_ip(self):
+        """First ipv4 address in list."""
+        if not isinstance(self.ipv4, list):
+            return None
+        if len(self.ipv4) > 0:
+            return self.ipv4[0]
+
+
 class VeilDomain(VeilApiObject):
     """Veil domain entity.
 
@@ -78,14 +129,51 @@ class VeilDomain(VeilApiObject):
         self.graphics_password = None
         self.template = template
         self.os_type = None
+        self.user_power_state = 0
+        self.guest_utils = None
         # cluster_id, node_id or data_pool_id can be UUID.
         self.cluster_id = str(cluster_id) if cluster_id else None
         self.node_id = str(node_id) if node_id else None
         self.data_pool_id = str(data_pool_id) if data_pool_id else None
 
+    @property
+    def guest_agent(self):
+        """Verbose domain guest utils."""
+        return DomainGuestUtils(**self.guest_utils)
+
+    @property
+    def power_state(self):
+        """Verbose domain power state."""
+        return DomainPowerState(self.user_power_state)
+
     def action_url(self, action: str) -> str:
         """Build domain action full url."""
         return self.api_object_url + action
+
+    @argument_type_checker_decorator
+    async def guest_command(self, veil_cmd: VeilGuestAgentCmd = None, qemu_cmd: str = None, fargs: dict = None,
+                            timeout: int = 5):
+        """Guest agent commands endpoint."""
+        url = self.api_object_url + 'guest-command/'
+        body = dict()
+        if veil_cmd:
+            body['veil_cmd'] = veil_cmd.value
+        if qemu_cmd:
+            body['qemu_cmd'] = qemu_cmd
+        if fargs:
+            body['fargs'] = fargs
+        if timeout:
+            body['timeout'] = timeout
+        response = await self._post(url=url, json=body)
+        return response
+
+    async def set_hostname(self, hostname: str = None):
+        """Set domain hostname on VeiL ECP."""
+        url = self.api_object_url + 'set-hostname/'
+        domain_hostname = hostname if hostname else self.verbose_name
+        body = dict(hostname=domain_hostname)
+        response = await self._post(url=url, json=body)
+        return response
 
     async def start(self, force: bool = False) -> 'VeilApiResponse':
         """Send domain action 'start'."""
