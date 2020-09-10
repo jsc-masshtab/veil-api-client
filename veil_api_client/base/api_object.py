@@ -41,6 +41,18 @@ class VeilRestPaginator:
         return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr]}
 
 
+class VeilApiObjectStatus:
+    """Veil api object possible statuses."""
+
+    creating = 'CREATING'
+    active = 'ACTIVE'
+    failed = 'FAILED'
+    deleting = 'DELETING'
+    service = 'SERVICE'
+    partial = 'PARTIAL'
+    success = 'SUCCESS'
+
+
 class VeilApiObject:
     """Base VeiL Api Object.
 
@@ -54,16 +66,6 @@ class VeilApiObject:
 
     api_object_id = UuidStringType('api_object_id')
     _client = TypeChecker('_client', VeilApiClient)
-
-    class __STATUS:
-        """Veil api object possible statuses."""
-
-        creating = 'CREATING'
-        active = 'ACTIVE'
-        failed = 'FAILED'
-        deleting = 'DELETING'
-        service = 'SERVICE'
-        partial = 'PARTIAL'
 
     def __init__(self, client: VeilApiClient, api_object_prefix: str, api_object_id: str = None) -> None:
         """Please see help(VeilApiObject) for more info."""
@@ -99,13 +101,13 @@ class VeilApiObject:
         """Layer for calling a client GET method."""
         return await self._client.get(api_object=self, url=url, extra_params=extra_params)
 
-    async def _post(self, url: str, json: dict = None) -> 'ClientResponse':
+    async def _post(self, url: str, json: dict = None, extra_params: dict = None) -> 'ClientResponse':
         """Layer for calling a client POST method."""
-        return await self._client.post(api_object=self, url=url, json=json)
+        return await self._client.post(api_object=self, url=url, json=json, extra_params=extra_params)
 
-    async def _put(self, url: str, json: dict = None) -> 'ClientResponse':
+    async def _put(self, url: str, json: dict = None, extra_params: dict = None) -> 'ClientResponse':
         """Layer for calling a client PUT method."""
-        return await self._client.put(api_object=self, url=url, json=json)
+        return await self._client.put(api_object=self, url=url, json=json, extra_params=extra_params)
 
     @property
     def public_attrs(self) -> dict:
@@ -125,7 +127,7 @@ class VeilApiObject:
 
     @property
     def task(self):
-        """VeilTask entity with same client as ApiObject."""
+        """Veil task entity with same client as ApiObject."""
         return VeilTask(client=self._client)
 
     @property
@@ -155,33 +157,33 @@ class VeilApiObject:
 
     @property
     def creating(self) -> bool:
-        """Entity status is __STATUS.creating."""
-        return self.status == self.__STATUS.creating if self.status else False
+        """Entity status is VeilApiObjectStatus.creating."""
+        return self.status == VeilApiObjectStatus.creating if self.status else False
 
     @property
     def active(self) -> bool:
-        """Entity status is __STATUS.active."""
-        return self.status == self.__STATUS.active if self.status else False
+        """Entity status is VeilApiObjectStatus.active."""
+        return self.status == VeilApiObjectStatus.active if self.status else False
 
     @property
     def failed(self) -> bool:
-        """Entity status is __STATUS.failed."""
-        return self.status == self.__STATUS.failed if self.status else False
+        """Entity status is VeilApiObjectStatus.failed."""
+        return self.status == VeilApiObjectStatus.failed if self.status else False
 
     @property
     def deleting(self) -> bool:
-        """Entity status is __STATUS.deleting."""
-        return self.status == self.__STATUS.deleting if self.status else False
+        """Entity status is VeilApiObjectStatus.deleting."""
+        return self.status == VeilApiObjectStatus.deleting if self.status else False
 
     @property
     def service(self) -> bool:
-        """Entity status is __STATUS.service."""
-        return self.status == self.__STATUS.service if self.status else False
+        """Entity status is VeilApiObjectStatus.service."""
+        return self.status == VeilApiObjectStatus.service if self.status else False
 
     @property
     def partial(self) -> bool:
-        """Entity status is __STATUS.partial."""
-        return self.status == self.__STATUS.partial if self.status else False
+        """Entity status is VeilApiObjectStatus.partial."""
+        return self.status == VeilApiObjectStatus.partial if self.status else False
 
     @argument_type_checker_decorator  # noqa
     async def list(self, paginator: VeilRestPaginator = None,
@@ -230,7 +232,8 @@ class VeilTask(VeilApiObject):
     async def check(self) -> 'VeilApiResponse':
         """All tasks completion endpoint.
 
-        Probably don`t need."""
+        Probably don`t need.
+        """
         url = self.base_url + 'check/'
         response = await self._put(url)
         return response
@@ -266,10 +269,22 @@ class VeilTask(VeilApiObject):
         return response
 
     @property
-    async def completed(self) -> bool:
+    async def success(self) -> bool:
         """Check that task is completed."""
-        # url = self.api_object_id
-        # extra_params = {'fields': 'status'}
-        # response = await self._get(url, extra_params=extra_params)
+        # TODO: использовать сокращенные поля в запросе?
         await self.info()
-        return self.status == 'SUCCESS'
+        return self.status == VeilApiObjectStatus.success
+
+    @property
+    async def failed(self) -> bool:
+        """Check that task is failed."""
+        # TODO: использовать сокращенные поля в запросе?
+        await self.info()
+        return self.status == VeilApiObjectStatus.failed
+
+    @property
+    async def finished(self) -> bool:
+        """Check that task is finished."""
+        # есть поле progress, но на него лучше не смотреть
+        await self.info()
+        return self.status in (VeilApiObjectStatus.failed, VeilApiObjectStatus.success)
