@@ -3,8 +3,12 @@
 
 from enum import Enum, IntEnum
 
+try:
+    from aiohttp.client_reqrep import ClientResponse
+except ImportError:  # pragma: no cover
+    ClientResponse = None
+
 from ..base.api_object import VeilApiObject, VeilRestPaginator
-from ..base.api_response import VeilApiResponse
 from ..base.utils import BoolType, StringType, UuidStringType, argument_type_checker_decorator
 
 
@@ -57,6 +61,28 @@ class DomainPowerState(IntEnum):
     ON = 3
 
 
+class DomainOsType:
+    """Possible domain os types."""
+
+    WIN = 'Windows'
+    LINUX = 'Linux'
+    OTHER = 'Other'
+
+
+class DomainTcpUsb:
+    """Domain TCP USB device.
+
+    Attributes:
+        host: IP адрес клиента с которого будет проброшено устройство.
+        service: Порт клиента с которого будет проброшено устройство.
+    """
+
+    def __init__(self, host: str, service: int):
+        """Please see help(DomainTcpUsb) for more info."""
+        self.host = host
+        self.service = service
+
+
 class VeilGuestAgentCmd(Enum):
     """Veil guest agent commands."""
 
@@ -81,9 +107,11 @@ class VeilGuestAgentCmd(Enum):
 
 
 class DomainGuestUtils:
+    """Guest utils attributes."""
 
     def __init__(self, veil_state: bool = False, qemu_state: bool = False, version: str = None, hostname: str = None,
                  ipv4: list = None) -> None:
+        """Please see help(DomainGuestUtils) for more info."""
         self.veil_state = veil_state
         self.qemu_state = qemu_state
         self.version = version
@@ -146,12 +174,40 @@ class VeilDomain(VeilApiObject):
         """Verbose domain power state."""
         return DomainPowerState(self.user_power_state)
 
+    @property
+    def powered(self):
+        """Domain is power state is ON."""
+        return self.power_state == DomainPowerState.ON
+
+    @property
+    def os_windows(self):
+        """Domain (VM) has Windows OS."""
+        return self.os_type == DomainOsType.WIN
+
+    @property
+    def hostname(self):
+        """Guest utils hostname value."""
+        return self.guest_agent.hostname if self.guest_utils else None
+
+    @property
+    async def in_ad(self):
+        """Windows domain (VM) already in AD."""
+        qemu_guest_command = {'path': 'powershell.exe',
+                              'arg': ['(Get-WmiObject Win32_ComputerSystem).PartOfDomain']}
+        response = await self.guest_command(qemu_cmd='guest-exec', f_args=qemu_guest_command)
+        if response.status_code == 200 and response.value:
+            guest_exec_response = response.value.get('guest-exec', dict()).get('out-data', 'False')
+            if isinstance(guest_exec_response, str):
+                guest_exec_response = guest_exec_response.strip()
+                return guest_exec_response == 'True'
+        return False
+
     def action_url(self, action: str) -> str:
         """Build domain action full url."""
         return self.api_object_url + action
 
     @argument_type_checker_decorator
-    async def guest_command(self, veil_cmd: VeilGuestAgentCmd = None, qemu_cmd: str = None, fargs: dict = None,
+    async def guest_command(self, veil_cmd: VeilGuestAgentCmd = None, qemu_cmd: str = None, f_args: dict = None,
                             timeout: int = 5):
         """Guest agent commands endpoint."""
         url = self.api_object_url + 'guest-command/'
@@ -160,8 +216,8 @@ class VeilDomain(VeilApiObject):
             body['veil_cmd'] = veil_cmd.value
         if qemu_cmd:
             body['qemu_cmd'] = qemu_cmd
-        if fargs:
-            body['fargs'] = fargs
+        if f_args:
+            body['fargs'] = f_args
         if timeout:
             body['timeout'] = timeout
         response = await self._post(url=url, json=body)
@@ -175,71 +231,140 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json=body)
         return response
 
-    async def start(self, force: bool = False) -> 'VeilApiResponse':
+    async def add_to_ad(self, domain_name: str, login: str, password: str, restart: bool = True,
+                        new_name: str = None) -> 'ClientResponse':
+        """Add domain (VM) to AD.
+
+        domain_name: str Specifies the domain to which the computers are added
+        login: str AD user which can add VM to domain
+        password: str AD user password
+        restart: bool restart VM that was added to the domain or workgroup
+        new_name: str Specifies a new name for the computer in the new domain
+        """
+        url = self.api_object_url + 'add-to-ad/'
+        body = dict(domainname=domain_name, login=login, password=password)
+        if restart:
+            body['restart'] = 1
+        if new_name:
+            body['newname'] = new_name
+        response = await self._post(url=url, json=body)
+        return response
+
+    async def rm_from_ad(self, login: str, password: str, restart: bool = True) -> 'ClientResponse':
+        """Remove domain (VM) from AD."""
+        url = self.api_object_url + 'rm-from-ad/'
+        body = dict(login=login, password=password)
+        if restart:
+            body['restart'] = 1
+        response = await self._post(url=url, json=body)
+        return response
+
+    async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
+        """Add a domain to one or more Active Directory groups."""
+        credential_value = '$(New-Object System.Management.Automation.PsCredential("{}", \
+                                    $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format(
+            domain_username, domain_password)
+        get_computer_filter = "Get-ADComputer -Identity '{}' -Properties 'SID' -Credential {}".format(computer_name,
+                                                                                                      credential_value)
+        add_group_filter = "Add-ADPrincipalGroupMembership -MemberOf '{}' -Credential {}".format(cn_pattern,
+                                                                                                 credential_value)
+        qemu_guest_command = {'path': 'powershell.exe', 'arg': [get_computer_filter, '|', add_group_filter]}
+        return await self.guest_command(qemu_cmd='guest-exec', f_args=qemu_guest_command)
+
+    async def attach_usb(self, action_type: str = 'tcp_usb_device', usb: dict = None, usb_controller: dict = None,
+                         tcp_usb: DomainTcpUsb = None, no_task: bool = False):
+        """Attach usb devices to VM."""
+        url = self.api_object_url + 'attach-usb/'
+        body = dict(action_type=action_type)
+        if usb and isinstance(usb, dict):
+            body['usb'] = usb
+        if usb_controller and isinstance(usb_controller, dict):
+            body['usb_controller'] = usb_controller
+        if tcp_usb:
+            body['tcp_usb'] = tcp_usb.__dict__
+        extra_params = {'async': 0} if no_task else None
+        response = await self._post(url=url, json=body, extra_params=extra_params)
+        return response
+
+    async def detach_usb(self, action_type: str = 'tcp_usb_device', controller_order: int = None, usb: str = None,
+                         remove_all: bool = True):
+        """Detach usb devices from VM."""
+        url = self.api_object_url + 'detach-usb/'
+        body = dict(action_type=action_type)
+        if controller_order and isinstance(controller_order, int):
+            body['controller_order'] = controller_order
+        if usb and isinstance(usb, str):
+            body['usb'] = usb
+        if remove_all:
+            body['remove_all'] = 1
+        response = await self._post(url=url, json=body)
+        return response
+
+    async def start(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'start'."""
         url = self.action_url('start/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def reboot(self, force: bool = False) -> 'VeilApiResponse':
+    async def reboot(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'reboot'."""
         url = self.action_url('reboot/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def suspend(self, force: bool = False) -> 'VeilApiResponse':
+    async def suspend(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'suspend'."""
         url = self.action_url('suspend/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def reset(self, force: bool = False) -> 'VeilApiResponse':
+    async def reset(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'reset'."""
         url = self.action_url('reset/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def shutdown(self, force: bool = False) -> 'VeilApiResponse':
+    async def shutdown(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'shutdown'."""
         url = self.action_url('shutdown/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def resume(self, force: bool = False) -> 'VeilApiResponse':
+    async def resume(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'resume'."""
         url = self.action_url('resume/')
         body = dict(force=force)
         response = await self._post(url=url, json=body)
         return response
 
-    async def remote_access_action(self, enable: bool = True) -> 'VeilApiResponse':
+    async def remote_access_action(self, enable: bool = True) -> 'ClientResponse':
         """Send domain action 'remote-action'."""
         url = self.api_object_url + 'remote-access/'
         body = dict(remote_access=enable)
         response = await self._post(url, json=body)
         return response
 
-    async def enable_remote_access(self) -> 'VeilApiResponse':
+    async def enable_remote_access(self) -> 'ClientResponse':
         """Enable domain remote-access."""
         return await self.remote_access_action(enable=True)
 
-    async def disable_remote_access(self) -> 'VeilApiResponse':
+    async def disable_remote_access(self) -> 'ClientResponse':
         """Disable domain remote-access."""
         return await self.remote_access_action(enable=False)
 
     @argument_type_checker_decorator
-    async def create(self, domain_configuration: DomainConfiguration) -> 'VeilApiResponse':
+    async def create(self, domain_configuration: DomainConfiguration) -> 'ClientResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
         response = await self._post(url=url, json=domain_configuration.__dict__)
         return response
 
-    async def remove(self, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def remove(self, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Remove domain instance on VeiL ECP."""
         url = self.action_url('remove/')
         body = dict(full=full, force=force)
@@ -247,7 +372,7 @@ class VeilDomain(VeilApiObject):
         return response
 
     async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None, # noqa
-                   fields: list = None) -> 'VeilApiResponse':  # noqa
+                   fields: list = None) -> 'ClientResponse':  # noqa
         """Get list of data_pools with node_id filter.
 
         By default get only domains with vdisks.
@@ -272,7 +397,7 @@ class VeilDomain(VeilApiObject):
         return await super().list(paginator=paginator, extra_params=extra_params)
 
     async def __multi_manager(self, action: MultiManagerAction, entity_ids: list, full: bool,
-                              force: bool) -> 'VeilApiResponse':
+                              force: bool) -> 'ClientResponse':
         """Multi manager with action.
 
         Possible actions:
@@ -289,37 +414,37 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json=body)
         return response
 
-    async def multi_start(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_start(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi start domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.START, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_shutdown(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_shutdown(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi shutdown domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.SHUTDOWN, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_suspend(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_suspend(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi suspend domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.SUSPEND, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_reboot(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_reboot(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi reboot domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.REBOOT, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_resume(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_resume(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi resume domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.RESUME, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_remove(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_remove(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi remove domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.DELETE, entity_ids=entity_ids, full=full,
                                           force=force)
 
-    async def multi_migrate(self, entity_ids: list, full: bool = True, force: bool = False) -> 'VeilApiResponse':
+    async def multi_migrate(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Multi migrate domain instance on VeiL ECP."""
         return await self.__multi_manager(action=MultiManagerAction.MIGRATE, entity_ids=entity_ids, full=full,
                                           force=force)

@@ -181,21 +181,27 @@ class VeilApiClient:
                                         ssl=self.__ssl_enabled)
 
     @veil_api_response_decorator
-    async def post(self, api_object, url: str, json: dict = None) -> Dict[str, str]:
+    async def post(self, api_object, url: str, json: dict = None, extra_params: dict = None) -> Dict[str, str]:
         """Send POST request to VeiL ECP."""
+        params = self.__params
+        if extra_params:
+            params.update(extra_params)
         logger.debug('%s POST request.', api_object.__class__.__name__)
         return await self.__api_request('post', url,
                                         headers=self.__headers,
-                                        params=self.__params,
+                                        params=params,
                                         ssl=self.__ssl_enabled,
                                         json=json)
 
     @veil_api_response_decorator
-    async def put(self, api_object, url: str, json: dict = None) -> Dict[str, str]:
+    async def put(self, api_object, url: str, json: dict = None, extra_params: dict = None) -> Dict[str, str]:
         """Send PUT request to VeiL ECP."""
+        params = self.__params
+        if extra_params:
+            params.update(extra_params)
         logger.debug('%s PUT request.', api_object.__class__.__name__)
         return await self.__api_request('put', url,
                                         headers=self.__headers,
-                                        params=self.__params,
+                                        params=params,
                                         ssl=self.__ssl_enabled,
                                         json=json)

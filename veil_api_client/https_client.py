@@ -18,9 +18,9 @@ from .api_objects.data_pool import VeilDataPool
 from .api_objects.domain import VeilDomain
 from .api_objects.node import VeilNode
 from .api_objects.vdisk import VeilVDisk
-from .base.api_object import VeilTask
 from .base.api_cache import VeilCacheOptions
 from .base.api_client import VeilApiClient
+from .base.api_object import VeilTask
 from .base.utils import IntType
 
 
