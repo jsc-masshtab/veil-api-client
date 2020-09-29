@@ -169,28 +169,11 @@ async def main():
 
     # '-Credential $(New-Object System.Management.Automation.PsCredential("{}", $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format('ad120', 'Bazalt1!')
     async with VeilClient(server1, token1) as veil_single:
-        vm_name = 'DEVYATKIN0910'
-        ad_login = 'ad120'
-        ad_password = 'Bazalt1!'
-        user_cn = 'vdi-autopool-test'
-
-        # qemu_guest_command = {'path': 'powershell.exe',
-        #                       'arg': ["Get-ADComputer",  "-Identity '{}'".format(vm_name), "-Properties 'SID'",
-        #                               "-Credential", "$(New-Object System.Management.Automation.PsCredential('{}',  $(ConvertTo-SecureString -String '{}' -AsPlainText -Force)))".format(ad_login, ad_password),
-        #                               "|", "Add-ADPrincipalGroupMembership", "-MemberOf '{}'".format(user_cn), "-Credential", "$(New-Object System.Management.Automation.PsCredential('{}',  $(ConvertTo-SecureString -String '{}' -AsPlainText -Force)))".format(ad_login, ad_password)
-        #                                 ]
-        #                       }
-
         domain_entity = veil_single.domain('414e54f5-3af3-4db6-884d-53f65a52b8b6')
-
-        action_response = await domain_entity.add_to_ad_group(computer_name=vm_name, domain_username=ad_login,
-                                                              domain_password=ad_password,
-                                                              cn_pattern=user_cn)
-
-        print('data:')
-        print(action_response.data)
-        print('Success:', action_response.success)
-
+        response = await domain_entity.info()
+        print('error code:', response.error_code)
+        print('error detail:', response.error_detail)
+        print(help(response))
 
 uvloop.install()
 loop = asyncio.get_event_loop()
