@@ -3,8 +3,9 @@
 import asyncio
 import uvloop
 from enum import IntEnum
+import logging
 
-from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, VeilCacheOptions, DomainConfiguration, VeilGuestAgentCmd, DomainTcpUsb
+from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, VeilCacheOptions, DomainConfiguration, VeilGuestAgentCmd, DomainTcpUsb, VeilRetryOptions
 
 # TODO: побороть кривые импорты
 # TODO: tests - доработать по отчету coverage
@@ -12,6 +13,7 @@ from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, 
 # TODO: description - документация
 # TODO: retry
 # TODO: описать как подключить собственный кеш на примере redis?
+logging.basicConfig(level=logging.DEBUG)
 
 
 class VmPowerState(IntEnum):
@@ -167,13 +169,14 @@ async def main():
 
     # альтернативная реализация ввода в домен с указанием path
 
-    # '-Credential $(New-Object System.Management.Automation.PsCredential("{}", $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format('ad120', 'Bazalt1!')
-    async with VeilClient(server1, token1) as veil_single:
-        domain_entity = veil_single.domain('414e54f5-3af3-4db6-884d-53f65a52b8b6')
+    retry_options = VeilRetryOptions(status_codes={404}, num_of_attempts=3)
+    print('retry options:', retry_options)
+
+    async with VeilClient(server1, token1, retry_opts=retry_options) as veil_single:
+        domain_entity = veil_single.domain('ac138e26-22f2-4c0a-9b2d-f76b5dec56b9')
         response = await domain_entity.info()
         print('error code:', response.error_code)
         print('error detail:', response.error_detail)
-        print(help(response))
 
 uvloop.install()
 loop = asyncio.get_event_loop()
