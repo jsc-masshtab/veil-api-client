@@ -57,6 +57,25 @@ class IntType(TypeChecker):
         super().__init__(name, int)
 
 
+class SetType(TypeChecker):
+    """Descriptor for set checking."""
+
+    def __init__(self, name):
+        """Use 'set' for TypeChecker value_type."""
+        super().__init__(name, set)
+
+
+class NullableSetType(SetType):
+    """Descriptor for set checking."""
+
+    def __set__(self, instance, value):
+        """Check that attribute value type equals value_type."""
+        if isinstance(value, self.value_type) or value is None:
+            instance.__dict__[self.name] = value
+        else:
+            raise TypeError('{val} is not a {val_type}'.format(val=value, val_type=self.value_type))
+
+
 class DictType(TypeChecker):
     """Descriptor for dict checking."""
 

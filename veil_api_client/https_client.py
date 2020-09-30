@@ -19,7 +19,7 @@ from .api_objects.domain import VeilDomain
 from .api_objects.node import VeilNode
 from .api_objects.vdisk import VeilVDisk
 from .base.api_cache import VeilCacheOptions
-from .base.api_client import VeilApiClient
+from .base.api_client import VeilApiClient, VeilRetryOptions
 from .base.api_object import VeilTask
 from .base.utils import IntType
 
@@ -44,7 +44,7 @@ class VeilClient(VeilApiClient):
     def __init__(self, server_address: str, token: str, ssl_enabled: bool = True, session_reopen: bool = False,
                  timeout: int = 5 * 60,
                  extra_headers: dict = None, extra_params: dict = None, cookies: dict = None,
-                 ujson_: bool = True, cache_opts: VeilCacheOptions = None) -> None:
+                 ujson_: bool = True, cache_opts: VeilCacheOptions = None, retry_opts: VeilRetryOptions = None) -> None:
         """Please see help(VeilClient) for more info."""
         if ujson is None and ujson_:
             raise RuntimeError('Please install `ujson`')  # pragma: no cover
@@ -63,7 +63,8 @@ class VeilClient(VeilApiClient):
                          extra_params=extra_params,
                          timeout=timeout,
                          cookies=cookies,
-                         json_serialize=serializer)
+                         json_serialize=serializer,
+                         retry_opts=retry_opts)
 
     def domain(self, domain_id: str = None, cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
                template: bool = None) -> 'VeilDomain':
@@ -107,13 +108,16 @@ class VeilClientSingleton:
     __client_instances = dict()
     __TIMEOUT = IntType('__TIMEOUT')
 
-    def __init__(self, timeout: int = 5 * 60, cache_opts: VeilCacheOptions = None) -> None:
+    def __init__(self, timeout: int = 5 * 60, cache_opts: VeilCacheOptions = None,
+                 retry_opts: VeilRetryOptions = None) -> None:
         """Please see help(VeilClientSingleton) for more info."""
         self.__TIMEOUT = timeout
         self.__CACHE_OPTS = cache_opts
+        self.__RETRY_OPTS = retry_opts
 
     def add_client(self, server_address: str, token: str,
-                   timeout: int = None, cache_opts: VeilCacheOptions = None) -> 'VeilClient':
+                   timeout: int = None, cache_opts: VeilCacheOptions = None,
+                   retry_opts: VeilRetryOptions = None) -> 'VeilClient':
         """Create new instance of VeilClient if it is not initialized on same address.
 
         Attributes:
@@ -123,9 +127,11 @@ class VeilClientSingleton:
         """
         _timeout = timeout if timeout else self.__TIMEOUT
         _cache_opts = cache_opts if cache_opts else self.__CACHE_OPTS
+        _retry_opts = retry_opts if retry_opts else self.__RETRY_OPTS
         if server_address not in self.__client_instances:
             instance = VeilClient(server_address=server_address, token=token,
-                                  session_reopen=True, timeout=_timeout, ujson_=True, cache_opts=_cache_opts)
+                                  session_reopen=True, timeout=_timeout, ujson_=True, cache_opts=_cache_opts,
+                                  retry_opts=_retry_opts)
             self.__client_instances[server_address] = instance
         return self.__client_instances[server_address]
 

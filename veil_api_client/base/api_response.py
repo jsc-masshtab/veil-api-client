@@ -80,7 +80,6 @@ class VeilApiResponse:
     @property
     def task(self):
         """Return VeilTask if response is 202."""
-        # TODO: Task in return annotation
         if self.status_code != 202 or not isinstance(self.data, dict) or not self.data.get('_task'):
             return
         task_inst = self.__api_object.task

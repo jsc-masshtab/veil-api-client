@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil api client."""
+import asyncio
 import logging
 from types import TracebackType
 from typing import Dict, Optional, Type
@@ -11,11 +12,137 @@ except ImportError:  # pragma: no cover
     aiohttp = None
 
 from .api_cache import cached_response_decorator
-from .utils import NullableDictType, VeilJwtTokenType, VeilUrlStringType, veil_api_response_decorator
+from .utils import (IntType, NullableDictType, NullableSetType, VeilJwtTokenType, VeilUrlStringType,
+                    veil_api_response_decorator)
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
-# TODO: max retries must be configurable param with configuration of observable statuses
+
+
+class VeilRetryOptions:
+    """Retry options class for veil api client.
+
+    Attributes:
+        num_of_attempts: num of retry attempts.
+        timeout: base try timeout time (with exponential grow).
+        max_timeout: max timeout between tries.
+        timeout_increase_step: timeout increase step.
+        status_codes: collection of response status codes witch must be repeated.
+        exceptions: collection of aiohttp exceptions witch must be repeated.
+    """
+
+    num_of_attempts = IntType('num_of_attempts')
+    timeout = IntType('timeout')
+    max_timeout = IntType('max_timeout')
+    timeout_increase_step = IntType('timeout_increase_step')
+    status_codes = NullableSetType('status_codes')
+    exceptions = NullableSetType('exceptions')
+
+    def __init__(self,
+                 num_of_attempts: int = 0,
+                 timeout: int = 1,
+                 max_timeout: int = 30,
+                 timeout_increase_step: int = 2,
+                 status_codes: set = None,
+                 exceptions: set = None
+                 ) -> None:
+        """Please see help(VeilRetryOptions) for more info."""
+        self.num_of_attempts = num_of_attempts
+        self.timeout = timeout
+        self.max_timeout = max_timeout
+        self.timeout_increase_step = timeout_increase_step
+        self.status_codes = status_codes
+        self.exceptions = exceptions
+
+
+class _RequestContext:
+    """Custom aiohttp.RequestContext class for request retry logic.
+
+    Attributes:
+        request: aiohttp.request operation (POST, GET, etc).
+        url: request url
+        num_of_attempts: num of retry attempts if request failed.
+        timeout: base try timeout time (with exponential grow).
+        max_timeout: max timeout between tries.
+        timeout_increase_step: timeout increase step.
+        status_codes: collection of response status codes witch must be repeated.
+        exceptions: collection of aiohttp exceptions witch must be repeated.
+        kwargs: additional aiohttp.request arguments, such as headers and etc.
+    """
+
+    def __init__(self,
+                 request: aiohttp.ClientRequest,
+                 url: str,
+                 num_of_attempts: int,
+                 timeout: int,
+                 max_timeout: int,
+                 timeout_increase_step: int,
+                 status_codes: set,
+                 exceptions: set,
+                 **kwargs
+                 ) -> None:
+        """Please see help(_RequestContext) for more info."""
+        self._request = request
+        self._url = url
+
+        self._num_of_attempts = num_of_attempts
+        self._timeout = timeout
+        self._max_timeout = max_timeout
+        self._timeout_increase_step = timeout_increase_step
+
+        if status_codes is None:
+            status_codes = set()
+        self._status_codes = status_codes
+
+        if exceptions is None:
+            exceptions = set()
+        self._exceptions = exceptions
+
+        self._kwargs = kwargs
+
+        self._current_attempt = 0
+        self._response = None
+
+    @property
+    def _exp_timeout(self) -> float:
+        """Retry request timeout witch can exponentially grow."""
+        timeout = self._timeout * (self._timeout_increase_step ** (self._current_attempt - 1))
+        return min(timeout, self._max_timeout)
+
+    def _bad_code(self, code: int) -> bool:
+        """Check that request status_code is bad."""
+        return 500 <= code <= 599 or code in self._status_codes
+
+    async def _execute_request(self) -> aiohttp.ClientResponse:
+        """Run client request on aiohttp."""
+        try:
+            self._current_attempt += 1
+
+            if self._current_attempt > 1:
+                logger.debug('Request %s attempt', self._current_attempt)
+
+            response = await self._request(self._url, **self._kwargs)
+            code = response.status
+            if self._current_attempt < self._num_of_attempts and self._bad_code(code):
+                await asyncio.sleep(self._exp_timeout)
+                return await self._execute_request()
+            self._response = response
+            return response
+        except Exception as e:
+            if self._current_attempt < self._num_of_attempts:
+                for exc in self._exceptions:
+                    if isinstance(e, exc):
+                        await asyncio.sleep(self._exp_timeout)
+                        return await self._execute_request()
+            raise e
+
+    async def __aenter__(self) -> aiohttp.ClientResponse:
+        return await self._execute_request()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self._response is not None:
+            if not self._response.closed:
+                self._response.close()
 
 
 class VeilApiClient:
@@ -37,6 +164,7 @@ class VeilApiClient:
         extra_params: additional user params.
         cookies: additional user cookies (probably useless).
         json_serialize: aiohttp.ClientSession json serializer.
+        retry_opts: VeilRetryOptions instance.
     """
 
     __AUTH_HEADER_KEY = 'Authorization'
@@ -51,7 +179,8 @@ class VeilApiClient:
 
     def __init__(self, server_address: str, token: str, transfer_protocol: str, ssl_enabled: bool = True,
                  session_reopen: bool = False, timeout: int = 5 * 60, extra_headers: dict = None,
-                 extra_params: dict = None, cookies: dict = None, json_serialize: aiohttp.client.JSONEncoder = None
+                 extra_params: dict = None, cookies: dict = None, json_serialize: aiohttp.client.JSONEncoder = None,
+                 retry_opts: VeilRetryOptions = None
                  ) -> None:
         """Please see help(VeilApiClient) for more info."""
         if aiohttp is None:
@@ -71,6 +200,7 @@ class VeilApiClient:
         self.__cookies = cookies
         self.__json_serialize = __json_serialize
 
+        self.__retry_opts = retry_opts
         self.__client_session = self.new_client_session
 
     async def __aenter__(self) -> 'VeilApiClient':
@@ -101,6 +231,7 @@ class VeilApiClient:
 
     @property
     def __base_params(self) -> Dict[str, int]:
+        """All requests to VeiL should be async by default."""
         return {'async': 1}
 
     @property
@@ -113,6 +244,11 @@ class VeilApiClient:
 
     @property
     def __base_headers(self) -> Dict[str, str]:
+        """Return preconfigured request headers.
+
+        Note:
+            response should be json encoded on utf-8 and EN locale.
+        """
         headers_dict = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -141,6 +277,18 @@ class VeilApiClient:
             self.__client_session = self.new_client_session
         return self.__client_session
 
+    def request_context(self, request: aiohttp.ClientRequest, url: str, headers: dict, params: dict, ssl: bool,
+                        json: dict = None):
+        """Create new _RequestContext instance."""
+        return _RequestContext(request=request, url=url, headers=headers, params=params,
+                               ssl=ssl, json=json,
+                               num_of_attempts=self.__retry_opts.num_of_attempts,
+                               timeout=self.__retry_opts.timeout,
+                               max_timeout=self.__retry_opts.max_timeout,
+                               timeout_increase_step=self.__retry_opts.timeout_increase_step,
+                               status_codes=self.__retry_opts.status_codes,
+                               exceptions=self.__retry_opts.exceptions)
+
     @staticmethod
     async def __fetch_response_data(response: aiohttp.ClientResponse) -> Dict[str, str]:
         """Collect all response attributes."""
@@ -154,7 +302,8 @@ class VeilApiClient:
 
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
                             json: dict = None) -> Dict[str, str]:
-        """Log parameters and execute passed aiohttp method."""
+        """Log parameters and execute passed aiohttp method without retry."""
+        print('simple request')
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
                      params, json)
@@ -166,6 +315,22 @@ class VeilApiClient:
         response_data = await self.__fetch_response_data(aiohttp_response)
         return response_data
 
+    async def __api_retry_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
+                                  json: dict = None) -> Dict[str, str]:
+        """Log parameters and execute passed aiohttp method with retry options."""
+        print('retry_request')
+        # log request
+        logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
+                     params, json)
+        # determine aiohttp.client method to call
+        aiohttp_request_method = getattr(self.__session, method_name)
+        # create aiohttp.request witch can be retried.
+        aiohttp_request = self.request_context(request=aiohttp_request_method, url=url, headers=headers, params=params,
+                                               ssl=ssl, json=json)
+        # execute request and fetch response data
+        async with aiohttp_request as aiohttp_response:
+            return await self.__fetch_response_data(aiohttp_response)
+
     @veil_api_response_decorator
     @cached_response_decorator
     async def get(self, api_object, url: str,
@@ -175,6 +340,12 @@ class VeilApiClient:
         if extra_params:
             params.update(extra_params)
         logger.debug('%s GET request.', api_object.__class__.__name__)
+        # Check what type of request we should use
+        if self.__retry_opts:
+            return await self.__api_retry_request('get', url,
+                                                  headers=self.__headers,
+                                                  params=params,
+                                                  ssl=self.__ssl_enabled)
         return await self.__api_request('get', url,
                                         headers=self.__headers,
                                         params=params,
