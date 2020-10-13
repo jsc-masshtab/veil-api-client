@@ -303,7 +303,6 @@ class VeilApiClient:
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
                             json: dict = None) -> Dict[str, str]:
         """Log parameters and execute passed aiohttp method without retry."""
-        print('simple request')
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
                      params, json)
@@ -318,7 +317,6 @@ class VeilApiClient:
     async def __api_retry_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
                                   json: dict = None) -> Dict[str, str]:
         """Log parameters and execute passed aiohttp method with retry options."""
-        print('retry_request')
         # log request
         logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
                      params, json)

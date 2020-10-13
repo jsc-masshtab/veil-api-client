@@ -154,6 +154,7 @@ class VeilDomain(VeilApiObject):
         self.node = None
         self.parent = None
         self.remote_access_port = None
+        self.real_remote_access_port = None
         self.graphics_password = None
         self.template = template
         self.os_type = None
