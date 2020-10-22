@@ -9,7 +9,7 @@ class VeilCluster(VeilApiObject):
 
     Attributes:
         client: https_client instance.
-        cluster_id: VeiL cluster id(uuid).
+        api_object_id: VeiL cluster id(uuid).
     """
 
     __API_OBJECT_PREFIX = 'clusters/'

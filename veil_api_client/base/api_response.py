@@ -33,9 +33,9 @@ class VeilApiResponse:
         self.data = data
         self.headers = headers
         self.__api_object = api_object
-        if status_code not in (200, 202):
+        if status_code not in self.__SUCCESS_STATUSES:
             logger.warning('request status code is %s', status_code)
-        logger.debug('response data: %s', data)
+            logger.warning('response data: %s', data)
 
     @property
     def paginator_results(self) -> list:

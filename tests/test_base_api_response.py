@@ -5,7 +5,7 @@ from aiohttp import web
 import pytest
 
 from veil_api_client.base.api_response import VeilApiResponse
-from veil_api_client.base.utils import veil_api_response_decorator
+from veil_api_client.base.utils import veil_api_response
 
 
 pytestmark = [pytest.mark.base]
@@ -47,7 +47,7 @@ class TestVeilApiResponse:
             data = await response.json()
         return dict(status_code=status_code, headers=dict(headers), data=data)
 
-    @veil_api_response_decorator
+    @veil_api_response
     async def client_response(self, client):
         """Response from fake server converted by veil_api_response_decorator."""
         raw_response = await client.get('/')

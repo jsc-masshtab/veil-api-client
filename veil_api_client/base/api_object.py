@@ -7,10 +7,9 @@ try:
 except ImportError:  # pragma: no cover
     ClientResponse = None
 
-from .api_client import VeilApiClient
 from .api_response import VeilApiResponse
 from .utils import (NullableIntType, NullableStringType,
-                    TypeChecker, UuidStringType, argument_type_checker_decorator)
+                    UuidStringType, argument_type_checker_decorator)
 
 
 class VeilRestPaginator:
@@ -65,9 +64,8 @@ class VeilApiObject:
     """
 
     api_object_id = UuidStringType('api_object_id')
-    _client = TypeChecker('_client', VeilApiClient)
 
-    def __init__(self, client: VeilApiClient, api_object_prefix: str, api_object_id: str = None) -> None:
+    def __init__(self, client, api_object_prefix: str, api_object_id: str = None) -> None:
         """Please see help(VeilApiObject) for more info."""
         # TODO: нужно иметь возможность указывать ttl
         self.__api_object_prefix = api_object_prefix
@@ -101,13 +99,13 @@ class VeilApiObject:
         """Layer for calling a client GET method."""
         return await self._client.get(api_object=self, url=url, extra_params=extra_params)
 
-    async def _post(self, url: str, json: dict = None, extra_params: dict = None) -> 'ClientResponse':
+    async def _post(self, url: str, json_data: dict = None, extra_params: dict = None) -> 'ClientResponse':
         """Layer for calling a client POST method."""
-        return await self._client.post(api_object=self, url=url, json=json, extra_params=extra_params)
+        return await self._client.post(api_object=self, url=url, json_data=json_data, extra_params=extra_params)
 
-    async def _put(self, url: str, json: dict = None, extra_params: dict = None) -> 'ClientResponse':
+    async def _put(self, url: str, json_data: dict = None, extra_params: dict = None) -> 'ClientResponse':
         """Layer for calling a client PUT method."""
-        return await self._client.put(api_object=self, url=url, json=json, extra_params=extra_params)
+        return await self._client.put(api_object=self, url=url, json_data=json_data, extra_params=extra_params)
 
     @property
     def public_attrs(self) -> dict:

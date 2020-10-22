@@ -9,8 +9,9 @@ class VeilDataPool(VeilApiObject):
 
     Attributes:
         client: https_client instance.
-        data_pool_id: VeiL data-pool id(uuid) for extra filtering.
+        api_object_id: VeiL data-pool id(uuid) for extra filtering.
         node_id:  node_id: VeiL node id(uuid) for extra filtering.
+        cluster_id:  node_id: VeiL cluster id(uuid) for extra filtering.
     """
 
     __API_OBJECT_PREFIX = 'data-pools/'

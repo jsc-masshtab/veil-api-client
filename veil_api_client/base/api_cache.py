@@ -77,7 +77,7 @@ class DictSerde:
         raise Exception('Unknown serialization format')
 
 
-def cached_response_decorator(func):
+def cached_response(func):
     """Check url and parameters in cache."""
 
     @functools.wraps(func)

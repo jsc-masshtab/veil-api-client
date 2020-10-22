@@ -5,7 +5,7 @@ import uvloop
 from enum import IntEnum
 import logging
 
-from veil_api_client import VeilClientSingleton, VeilRestPaginator, VeilClient, VeilCacheOptions, DomainConfiguration, VeilGuestAgentCmd, DomainTcpUsb, VeilRetryOptions
+from veil_api_client import VeilClient, VeilCacheOptions, DomainConfiguration, VeilGuestAgentCmd, DomainTcpUsb, VeilRetryOptions
 
 # TODO: побороть кривые импорты
 # TODO: tests - доработать по отчету coverage
@@ -27,10 +27,26 @@ class VmPowerState(IntEnum):
 
 async def main():
     """Примеры использования."""
-    token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMzUsInVzZXJuYW1lIjoiZGV2eWF0a2luIiwiZXhwIjoxOTEyNzcwMTYzLCJzc28iOmZhbHNlLCJvcmlnX2lhdCI6MTU5ODI3NDE2M30.YQAWEy7Ip0XedU1e4rC9Ijv8O8LUYUlhRJ3T3vhZdRI'
+    token1 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo4LCJ1c2VybmFtZSI6InZkaV85a2luIiwiZXhwIjoxOTE3MjcwMDU5LCJzc28iOmZhbHNlLCJvcmlnX2lhdCI6MTYwMjc3NDA1OX0.ZXbVFPHXE1oblEmWRnVY4FNROu0QAzDjTdbRXL2itIs'
+    token2 = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNjAzMzcyNzQ5LCJzc28iOmZhbHNlLCJvcmlnX2lhdCI6MTYwMzI4NjM0OX0.RrYDLZoqjjkRxuLnV6NEQeEVljtuvHravn1IophDlcI'
     server1 = '192.168.11.115'
 
-    # cache_options = VeilCacheOptions(ttl=10, cache_type='memcached', server=('localhost', 11211))
+    async with VeilClient(token=token2, server_address=server1) as client:
+        veil_controller = client.controller()
+        try:
+            print(await veil_controller.base_version())
+        except Exception as E:
+            print(E)
+
+        # ids_set = {'907e3335-4f6b-4de9-a9ef-be0253befb71','f8f057af-f846-4c03-a46b-556bb662faac'}
+        # ids_str = ','.join(ids_set)
+        ids_str = "907e3335-4f6b-4de9-a9ef-be0253befb71,"
+        # TODO: убрать лишнюю запятую
+        domains_list_response = await client.domain().list(fields=['id', 'user_power_state'],
+                                                  params={
+                                                          'ids': str(ids_str)})
+        print('domains list:', domains_list_response.paginator_results[0].get('id'))
+    # cache_options = VeilCacheOptions(ttl=10, cache_type='memcached', server=('localhost', 11211))a
 
     # пример про заведение в домен
     # async with VeilClient(server1, token1) as veil_single:
@@ -169,14 +185,14 @@ async def main():
 
     # альтернативная реализация ввода в домен с указанием path
 
-    retry_options = VeilRetryOptions(status_codes={404}, num_of_attempts=3)
-    print('retry options:', retry_options)
-
-    async with VeilClient(server1, token1, retry_opts=retry_options) as veil_single:
-        domain_entity = veil_single.domain('ac138e26-22f2-4c0a-9b2d-f76b5dec56b9')
-        response = await domain_entity.info()
-        print('error code:', response.error_code)
-        print('error detail:', response.error_detail)
+    # retry_options = VeilRetryOptions(status_codes={404}, num_of_attempts=3)
+    # print('retry options:', retry_options)
+    #
+    # async with VeilClient(server1, token1, retry_opts=retry_options) as veil_single:
+    #     domain_entity = veil_single.domain('ac138e26-22f2-4c0a-9b2d-f76b5dec56b9')
+    #     response = await domain_entity.info()
+    #     print('error code:', response.error_code)
+    #     print('error detail:', response.error_detail)
 
 uvloop.install()
 loop = asyncio.get_event_loop()

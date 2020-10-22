@@ -9,7 +9,7 @@ class VeilController(VeilApiObject):
 
     Attributes:
         client: https_client instance.
-        controller_id: VeiL controller id(uuid).
+        api_object_id: VeiL controller id(uuid).
     """
 
     __API_OBJECT_PREFIX = 'controllers/'
