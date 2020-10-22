@@ -13,7 +13,7 @@ class VeilNode(VeilApiObject):
 
     Attributes:
         client: https_client instance.
-        node_id: VeiL node id(uuid).
+        api_object_id: VeiL node id(uuid).
         cluster_id: VeiL cluster id(uuid) for extra filtering.
     """
 

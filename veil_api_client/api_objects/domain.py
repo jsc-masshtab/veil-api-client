@@ -221,7 +221,7 @@ class VeilDomain(VeilApiObject):
             body['fargs'] = f_args
         if timeout:
             body['timeout'] = timeout
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def set_hostname(self, hostname: str = None):
@@ -229,7 +229,7 @@ class VeilDomain(VeilApiObject):
         url = self.api_object_url + 'set-hostname/'
         domain_hostname = hostname if hostname else self.verbose_name
         body = dict(hostname=domain_hostname)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def add_to_ad(self, domain_name: str, login: str, password: str, restart: bool = True,
@@ -248,7 +248,7 @@ class VeilDomain(VeilApiObject):
             body['restart'] = 1
         if new_name:
             body['newname'] = new_name
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def rm_from_ad(self, login: str, password: str, restart: bool = True) -> 'ClientResponse':
@@ -257,7 +257,7 @@ class VeilDomain(VeilApiObject):
         body = dict(login=login, password=password)
         if restart:
             body['restart'] = 1
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
@@ -284,7 +284,7 @@ class VeilDomain(VeilApiObject):
         if tcp_usb:
             body['tcp_usb'] = tcp_usb.__dict__
         extra_params = {'async': 0} if no_task else None
-        response = await self._post(url=url, json=body, extra_params=extra_params)
+        response = await self._post(url=url, json_data=body, extra_params=extra_params)
         return response
 
     async def detach_usb(self, action_type: str = 'tcp_usb_device', controller_order: int = None, usb: str = None,
@@ -298,56 +298,56 @@ class VeilDomain(VeilApiObject):
             body['usb'] = usb
         if remove_all:
             body['remove_all'] = 1
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def start(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'start'."""
         url = self.action_url('start/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def reboot(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'reboot'."""
         url = self.action_url('reboot/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def suspend(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'suspend'."""
         url = self.action_url('suspend/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def reset(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'reset'."""
         url = self.action_url('reset/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def shutdown(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'shutdown'."""
         url = self.action_url('shutdown/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def resume(self, force: bool = False) -> 'ClientResponse':
         """Send domain action 'resume'."""
         url = self.action_url('resume/')
         body = dict(force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def remote_access_action(self, enable: bool = True) -> 'ClientResponse':
         """Send domain action 'remote-action'."""
         url = self.api_object_url + 'remote-access/'
         body = dict(remote_access=enable)
-        response = await self._post(url, json=body)
+        response = await self._post(url, json_data=body)
         return response
 
     async def enable_remote_access(self) -> 'ClientResponse':
@@ -362,18 +362,19 @@ class VeilDomain(VeilApiObject):
     async def create(self, domain_configuration: DomainConfiguration) -> 'ClientResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
-        response = await self._post(url=url, json=domain_configuration.__dict__)
+        response = await self._post(url=url, json_data=domain_configuration.__dict__)
         return response
 
     async def remove(self, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Remove domain instance on VeiL ECP."""
         url = self.action_url('remove/')
         body = dict(full=full, force=force)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None, # noqa
-                   fields: list = None) -> 'ClientResponse':  # noqa
+                   fields: list = None,
+                   params: dict = None) -> 'ClientResponse':  # noqa
         """Get list of data_pools with node_id filter.
 
         By default get only domains with vdisks.
@@ -390,11 +391,11 @@ class VeilDomain(VeilApiObject):
         elif isinstance(self.template, bool):
             # ujson can`t work with booleans
             extra_params['template'] = int(self.template)
-        # TODO: фильтр для fields сделать аналогично paginator, чтобы он проверял наличие
-        #  переданных полей в атрибутах сущности?
+        # Additional request parameters
         if fields and isinstance(fields, list):
             extra_params['fields'] = ','.join(fields)
-
+        if params:
+            extra_params.update(params)
         return await super().list(paginator=paginator, extra_params=extra_params)
 
     async def __multi_manager(self, action: MultiManagerAction, entity_ids: list, full: bool,
@@ -412,7 +413,7 @@ class VeilDomain(VeilApiObject):
         """
         url = self.base_url + 'multi-manager/'
         body = dict(full=full, force=force, entity_ids=entity_ids, action=action.value)
-        response = await self._post(url=url, json=body)
+        response = await self._post(url=url, json_data=body)
         return response
 
     async def multi_start(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':

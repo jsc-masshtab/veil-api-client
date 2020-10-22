@@ -188,7 +188,7 @@ def argument_type_checker_decorator(func):
     return wrapper
 
 
-def veil_api_response_decorator(func) -> 'VeilApiResponse':
+def veil_api_response(func) -> 'VeilApiResponse':
     """Make VeilApiResponse from aiohttp.response."""
 
     @functools.wraps(func)

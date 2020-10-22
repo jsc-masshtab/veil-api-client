@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Concrete VeiL api objects."""
-from .domain import DomainConfiguration, DomainTcpUsb, VeilGuestAgentCmd
+from .domain import DomainConfiguration, DomainTcpUsb, VeilDomain, VeilGuestAgentCmd
 
 __all__ = (
-    'DomainConfiguration', 'VeilGuestAgentCmd', 'DomainTcpUsb'
+    'DomainConfiguration', 'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilDomain'
 )

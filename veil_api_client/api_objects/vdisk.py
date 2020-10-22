@@ -8,7 +8,7 @@ class VeilVDisk(VeilApiObject):
 
     Attributes:
         client: https_client instance.
-        vdisk_id: VeiL vdisk id(uuid).
+        api_object_id: VeiL vdisk id(uuid).
     """
 
     __API_OBJECT_PREFIX = 'vdisks/'
