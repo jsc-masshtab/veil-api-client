@@ -330,16 +330,17 @@ class VeilClient:
                 try:
                     data = await response.json()
                 except aiohttp.ContentTypeError:
-                    logger.debug('VeiL response has wrong content type.')
+                    logger.debug('VeiL response has wrong content type. Status code changed to 418.')
                     data = dict()
+                    status_code = 418
             return dict(status_code=status_code, headers=dict(headers), data=data)
 
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
                             json_data: dict = None) -> Dict[str, str]:
         """Log parameters and execute passed aiohttp method without retry."""
-        # TODO: deprecate?
+        # TODO: deprecate in 2.1.0
         # VeiL can`t decode requests witch contain extra commas
-        for argument, value in params.items():
+        for argument, value in params.items():  # noqa
             if isinstance(value, str) and value[-1] == ',':
                 params[argument] = value[:-1]
         # log request

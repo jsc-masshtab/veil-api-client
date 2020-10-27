@@ -42,7 +42,8 @@ class VeilCacheOptions:
 
     Arguments:
         cache_type: supported cache storage type (now only memcached).
-        ttl - cache value time to live (int).
+        ttl: cache value time to live (int).
+        server:
     """
 
     ttl = IntType
