@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil api cache drivers."""
 import functools
-import inspect
 import json
 import logging
 from enum import Enum
