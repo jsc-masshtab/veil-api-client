@@ -110,7 +110,7 @@ class DomainGuestUtils:
     """Guest utils attributes."""
 
     def __init__(self, veil_state: bool = False, qemu_state: bool = False, version: str = None, hostname: str = None,
-                 ipv4: list = None) -> None:
+                 ipv4: list = None, **_) -> None:
         """Please see help(DomainGuestUtils) for more info."""
         self.veil_state = veil_state
         self.qemu_state = qemu_state
@@ -158,17 +158,42 @@ class VeilDomain(VeilApiObject):
         self.graphics_password = None
         self.template = template
         self.os_type = None
+        self.os_version = None
         self.user_power_state = 0
         self.guest_utils = None
+        self.cpu_topology = None
         # cluster_id, node_id or data_pool_id can be UUID.
         self.cluster_id = str(cluster_id) if cluster_id else None
         self.node_id = str(node_id) if node_id else None
         self.data_pool_id = str(data_pool_id) if data_pool_id else None
 
     @property
+    def cpu_count(self):
+        """Get cpu_count from cpu_topology dict."""
+        if isinstance(self.cpu_topology, dict):
+            return self.cpu_topology.get('cpu_count')
+
+    @property
+    def parent_name(self):
+        """Get parent Domain name."""
+        if isinstance(self.parent, dict):
+            return self.parent.get('verbose_name')
+
+    @property
+    def parent_uuid(self):
+        """Get parent Domain UUID."""
+        if isinstance(self.parent, dict):
+            return self.parent.get('id')
+
+    @property
     def guest_agent(self):
         """Verbose domain guest utils."""
         return DomainGuestUtils(**self.guest_utils)
+
+    @property
+    def first_ipv4(self):
+        """First ipv4 address."""
+        return self.guest_agent.first_ipv4_ip
 
     @property
     def power_state(self):

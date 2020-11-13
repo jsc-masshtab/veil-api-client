@@ -1,7 +1,7 @@
 [![Python 3.5](https://img.shields.io/badge/python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
-![Coverage](https://img.shields.io/static/v1?label=coverage&message=52%&color=yellow)
+[![Coverage](https://img.shields.io/static/v1?label=coverage&message=51%&color=yellow)](https://coverage.readthedocs.io/en/coverage-5.1/)
 
 # VeiL api client 
 Предназначен для упрощения интеграции между конечным приложением/скриптом и ECP VeiL. Если вы не хотите слишком глубоко 
