@@ -89,11 +89,6 @@ def cached_response(func):
         # TODO: use PooledClient
         # TODO: best practices from https://pymemcache.readthedocs.io/en/latest/getting_started.html
 
-        # deprecated because of possible VeilClient descendants
-        # first element in args must be VeilClient instance
-        # if not args or not inspect.isclass(args[0]) or not args[0].__class__.__name__ == 'VeilClient':
-        #     return await func(*args, **kwargs)
-
         cache_opts = args[0]._cache_opts  # noqa
         # cache options must be set
         if not cache_opts:

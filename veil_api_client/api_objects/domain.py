@@ -110,7 +110,7 @@ class DomainGuestUtils:
     """Guest utils attributes."""
 
     def __init__(self, veil_state: bool = False, qemu_state: bool = False, version: str = None, hostname: str = None,
-                 ipv4: list = None) -> None:
+                 ipv4: list = None, **_) -> None:
         """Please see help(DomainGuestUtils) for more info."""
         self.veil_state = veil_state
         self.qemu_state = qemu_state
