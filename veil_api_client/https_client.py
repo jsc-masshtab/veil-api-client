@@ -402,6 +402,13 @@ class VeilClient:
         if extra_params:
             params.update(extra_params)
         logger.debug('%s POST request.', api_object.__class__.__name__)
+        # I believe that this is BAD idea, but no another options.
+        if self.__retry_opts:
+            return await self.__api_retry_request('post', url,
+                                                  headers=self.__headers,
+                                                  params=params,
+                                                  ssl=self.__ssl_enabled,
+                                                  json_data=json_data)
         return await self.__api_request('post', url,
                                         headers=self.__headers,
                                         params=params,
@@ -415,6 +422,13 @@ class VeilClient:
         if extra_params:
             params.update(extra_params)
         logger.debug('%s PUT request.', api_object.__class__.__name__)
+        # I believe that this is BAD idea, but no another options.
+        if self.__retry_opts:
+            return await self.__api_retry_request('put', url,
+                                                  headers=self.__headers,
+                                                  params=params,
+                                                  ssl=self.__ssl_enabled,
+                                                  json_data=json_data)
         return await self.__api_request('put', url,
                                         headers=self.__headers,
                                         params=params,
