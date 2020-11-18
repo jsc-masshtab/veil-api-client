@@ -126,6 +126,19 @@ class DomainGuestUtils:
         if len(self.ipv4) > 0:
             return self.ipv4[0]
 
+    @property
+    def apipa_problem(self):
+        """All ipv4 addresses in 169.254.*.*.
+
+        Regex expression works dramatically slower.
+        """
+        apipa_case = '169.254.'
+        if not isinstance(self.ipv4, list):
+            return None
+        if len(self.ipv4) == 0:
+            return None
+        return all(isinstance(ip, str) and apipa_case in ip for ip in self.ipv4)
+
 
 class VeilDomain(VeilApiObject):
     """Veil domain entity.
@@ -214,6 +227,11 @@ class VeilDomain(VeilApiObject):
     def hostname(self):
         """Guest utils hostname value."""
         return self.guest_agent.hostname if self.guest_utils else None
+
+    @property
+    def apipa_problem(self):
+        """Guest utils apipa_problem value."""
+        return self.guest_agent.apipa_problem if self.guest_utils else None
 
     @property
     async def in_ad(self):
