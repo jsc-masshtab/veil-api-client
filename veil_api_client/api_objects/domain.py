@@ -206,7 +206,7 @@ class VeilDomain(VeilApiObject):
     @property
     def first_ipv4(self):
         """First ipv4 address."""
-        return self.guest_agent.first_ipv4_ip
+        return self.guest_agent.first_ipv4_ip if self.guest_utils else None
 
     @property
     def power_state(self):
