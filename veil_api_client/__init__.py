@@ -5,7 +5,7 @@
 for additional info see README.md
 """
 
-__version__ = '2.0.3'
+__version__ = '2.0.4'
 
 from .api_objects.domain import DomainConfiguration, DomainTcpUsb, VeilDomain, VeilGuestAgentCmd
 from .base.api_cache import VeilCacheOptions
