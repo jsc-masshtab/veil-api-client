@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
-
+import sys
 from enum import Enum, IntEnum
 
 try:
@@ -305,6 +305,12 @@ class VeilDomain(VeilApiObject):
 
     async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
         """Add a domain to one or more Active Directory groups."""
+        print(
+            '\nWARNING: add_to_ad_group method scheduled for removal in 2.x. '
+            'use your own LDAP command, like '
+            'extend.microsoft.add_members_to_groups\n',
+            file=sys.stderr,
+        )
         credential_value = '$(New-Object System.Management.Automation.PsCredential("{}", \
                                     $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format(
             domain_username, domain_password)
