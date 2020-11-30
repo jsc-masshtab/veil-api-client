@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Veil domain entity."""
-
+import sys
 from enum import Enum, IntEnum
 
 try:
@@ -126,6 +126,19 @@ class DomainGuestUtils:
         if len(self.ipv4) > 0:
             return self.ipv4[0]
 
+    @property
+    def apipa_problem(self):
+        """All ipv4 addresses in 169.254.*.*.
+
+        Regex expression works dramatically slower.
+        """
+        apipa_case = '169.254.'
+        if not isinstance(self.ipv4, list):
+            return None
+        if len(self.ipv4) == 0:
+            return None
+        return all(isinstance(ip, str) and apipa_case in ip for ip in self.ipv4)
+
 
 class VeilDomain(VeilApiObject):
     """Veil domain entity.
@@ -193,7 +206,7 @@ class VeilDomain(VeilApiObject):
     @property
     def first_ipv4(self):
         """First ipv4 address."""
-        return self.guest_agent.first_ipv4_ip
+        return self.guest_agent.first_ipv4_ip if self.guest_utils else None
 
     @property
     def power_state(self):
@@ -214,6 +227,11 @@ class VeilDomain(VeilApiObject):
     def hostname(self):
         """Guest utils hostname value."""
         return self.guest_agent.hostname if self.guest_utils else None
+
+    @property
+    def apipa_problem(self):
+        """Guest utils apipa_problem value."""
+        return self.guest_agent.apipa_problem if self.guest_utils else None
 
     @property
     async def in_ad(self):
@@ -287,6 +305,12 @@ class VeilDomain(VeilApiObject):
 
     async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
         """Add a domain to one or more Active Directory groups."""
+        print(
+            '\nWARNING: add_to_ad_group method scheduled for removal in 2.x. '
+            'use your own LDAP command, like '
+            'extend.microsoft.add_members_to_groups\n',
+            file=sys.stderr,
+        )
         credential_value = '$(New-Object System.Management.Automation.PsCredential("{}", \
                                     $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format(
             domain_username, domain_password)

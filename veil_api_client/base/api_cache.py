@@ -112,8 +112,13 @@ def cached_response(func):
             # TODO: более явно перечислить статусы успеха на veil
             if result['status_code'] in (200, 201, 202, 204):
                 logger.debug('save %s response to cache', url)
-                # save request response to cache
-                client.set(cache_key, result, expire=cache_opts.ttl)
+                try:
+                    # save request response to cache
+                    client.set(cache_key, result, expire=cache_opts.ttl)
+                except Exception as ex_msg:
+                    # Key too long exc.
+                    logger.error('Failed to save response to cache.')
+                    logger.debug(ex_msg)
         else:
             logger.debug('get %s response from cache', url)
         return result
