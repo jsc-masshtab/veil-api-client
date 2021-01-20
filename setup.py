@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='veil-api-client',
-    version='2.0.4',
+    version='2.1.2',
     author='Aleksey Devyatkin',
     author_email='a.devyatkin@mashtab.org',
     description='VeiL ECP Api client',
@@ -18,6 +18,7 @@ setuptools.setup(
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
+        'Development Status :: 5 - Production/Stable',
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.5',

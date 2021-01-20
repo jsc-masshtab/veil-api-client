@@ -4,35 +4,52 @@ import asyncio
 # import uvloop
 import logging
 
-from veil_api_client import VeilClient, VeilClientSingleton, VeilCacheOptions, VeilDomain, VeilRetryOptions, VeilRestPaginator
+from veil_api_client import VeilClient, VeilClientSingleton, VeilCacheOptions, VeilDomain, VeilRetryOptions, VeilRestPaginator, DomainConfiguration
 
 logging.basicConfig(level=logging.DEBUG)
 
-token = 'jwt eyJ0eXAiOiJKV1DYFeGNGySnmeI'
-server = '192.168.14.151'
+token = 'jwt eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJ1c2VybmFtZSI6ImRldnlhdGtpbiIsImV4cCI6MTkyMjYxNzgzOCwic3NvIjpmYWxzZSwib3JpZ19pYXQiOjE2MDgxMjE4Mzh9.eGQrwaT0wXzSfBiThT00l6PGZWZvmFLnp9Eu9j48W6A'
+server = '192.168.11.102'
 
 
 async def simple_main():
     async with VeilClient(server_address=server, token=token) as session:
-        # Настраиваем пагинатор - сортировка по полю verbose_name, первые 10 записей.
-        paginator = VeilRestPaginator(ordering='verbose_name', limit=10)
-        # У каждой сессии есть атрибут - сущность на ECP VeiL.
-        veil_domain_entity = session.domain()
-        # получаем ответ со списком вм
-        veil_response = await veil_domain_entity.list(paginator=paginator)
+        # Список пулов ресурсов
+        # veil_resource_pool = session.resource_pool()
+        # veil_response = await veil_resource_pool.list()
+        # for pool in veil_response.response:
+        #     for arg, value in pool.public_attrs.items():
+        #         if value:
+        #             print('{}[{}]: {}'.format(pool.verbose_name, arg, value))
+        #
+        # Информация о конкретном пуле ресурсов
+        # veil_resource_pool = session.resource_pool('9aa09ceb-f709-4b48-ab8a-14a8a4dba2b7')
+        # veil_response = await veil_resource_pool.info()
+        # for arg, value in veil_response.response[0].public_attrs.items():
+        #     if value:
+        #         print('[{}]: {}'.format(arg, value))
+        #
+        # Фильтр ВМ (без шаблонов) по пулу ресурсов
+        # veil_response = await session.domain(resource_pool='9aa09ceb-f709-4b48-ab8a-14a8a4dba2b7', template=False).list(
+        #     fields=['id',
+        #             'verbose_name',
+        #             'guest_utils'])
+        # for domain in veil_response.response:
+        #     print('domain {}'.format(domain.verbose_name))
+        # Создане ВМ
+        # Создание в старом формате
+        # old_domain = DomainConfiguration(verbose_name='old_domain-2', node='36f5877a-68e9-4bb3-92df-ac3cdb4c7fd1',
+        #                                  datapool='ce289d42-a13b-4ac8-b0a4-89e03b493fab',
+        #                                  parent='7f250778-ce57-4dba-a411-87d88c326cf5', thin=True)
+        # veil_response = await session.domain().create(domain_configuration=old_domain)
+        # print(veil_response.data)
 
-        # Ответ списком имеет 200й статус, ответ на результат задачи скорее всего будет в 202 статусе
-        if veil_response.status_code == 418:
-            raise AssertionError('VeiL ECP проходит процедуру обновления. Попробуйте позже.')
-        elif not veil_response.success:
-            raise AssertionError('Ошибка получения информации от VeiL.')
-
-        # Включаем каждую из полученных ВМ
-        for domain in veil_response.response:
-            start_response = await domain.start()
-            if not start_response.success:
-                raise AssertionError(start_response.error_detail)
-
+        # Создание в новом формате
+        new_domain = DomainConfiguration(verbose_name='new_domain-2',
+                                         resource_pool='9aa09ceb-f709-4b48-ab8a-14a8a4dba2b7',
+                                         parent='7f250778-ce57-4dba-a411-87d88c326cf5', thin=True)
+        veil_response = await session.domain().create(domain_configuration=new_domain)
+        print(veil_response.data)
 
 # async def extra_main():
 #

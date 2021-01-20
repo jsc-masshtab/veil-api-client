@@ -27,6 +27,7 @@ from .api_objects.controller import VeilController
 from .api_objects.data_pool import VeilDataPool
 from .api_objects.domain import VeilDomain
 from .api_objects.node import VeilNode
+from .api_objects.resource_pool import VeilResourcePool
 from .api_objects.vdisk import VeilVDisk
 from .base.api_cache import VeilCacheOptions, cached_response
 from .base.api_object import VeilTask
@@ -170,7 +171,6 @@ class VeilClient:
     Private attributes:
         __AUTH_HEADER_KEY: Header authorization key.
         __USER_AGENT_VAL: Header user-agent value.
-        __IDEMPOTENCY_HEADER_KEY: Header idempotency key.
         __TRANSFER_PROTOCOL_PREFIX: force to use only HTTPS.
 
     Attributes:
@@ -189,8 +189,8 @@ class VeilClient:
 
     __TRANSFER_PROTOCOL_PREFIX = 'https://'
     __AUTH_HEADER_KEY = 'Authorization'
-    __USER_AGENT_VAL = 'veil-api-client/2.0'
-    __IDEMPOTENCY_HEADER_KEY = 'Idempotency-Key'
+    __USER_AGENT_VAL = 'veil-api-client/2.1'
+    __IDEMPOTENCY_BODY_KEY = 'idempotency_key'
     __extra_headers = NullableDictType('__extra_headers')
     __extra_params = NullableDictType('__extra_params')
     __cookies = NullableDictType('__cookies')
@@ -287,7 +287,6 @@ class VeilClient:
             'Cache-Control': 'max-age=0',
             'Accept-Language': 'en',
             self.__AUTH_HEADER_KEY: '{}'.format(self.token),
-            self.__IDEMPOTENCY_HEADER_KEY: '{}'.format(uuid4())
         }
         return headers_dict
 
@@ -338,7 +337,7 @@ class VeilClient:
     async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
                             json_data: dict = None) -> Dict[str, str]:
         """Log parameters and execute passed aiohttp method without retry."""
-        # TODO: deprecate in 2.1.0
+        # TODO: deprecate in 2.2.1
         # VeiL can`t decode requests witch contain extra commas
         for argument, value in params.items():  # noqa
             if isinstance(value, str) and value[-1] == ',':
@@ -398,6 +397,8 @@ class VeilClient:
     @veil_api_response
     async def post(self, api_object, url: str, json_data: dict = None, extra_params: dict = None) -> Dict[str, str]:
         """Send POST request to VeiL ECP."""
+        if isinstance(json_data, dict):
+            json_data[self.__IDEMPOTENCY_BODY_KEY] = '{}'.format(uuid4())
         params = self.__params
         if extra_params:
             params.update(extra_params)
@@ -435,10 +436,12 @@ class VeilClient:
                                         ssl=self.__ssl_enabled,
                                         json_data=json_data)
 
-    def domain(self, domain_id: str = None, cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
+    def domain(self, domain_id: str = None, resource_pool: str = None,
+               cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
                template: bool = None) -> 'VeilDomain':
         """Return VeilDomain entity."""
-        return VeilDomain(client=self, template=template, api_object_id=domain_id, cluster_id=cluster_id,
+        return VeilDomain(client=self, template=template, api_object_id=domain_id, resource_pool=resource_pool,
+                          cluster_id=cluster_id,
                           node_id=node_id,
                           data_pool_id=data_pool_id)
 
@@ -446,17 +449,24 @@ class VeilClient:
         """Return VeilController entity."""
         return VeilController(client=self, api_object_id=controller_id)
 
+    def resource_pool(self, resource_pool_id: str = None, node_id: str = None,
+                      cluster_id: str = None) -> 'VeilResourcePool':
+        """Return VeilResourcePool entity."""
+        return VeilResourcePool(client=self, api_object_id=resource_pool_id, node_id=node_id, cluster_id=cluster_id)
+
     def cluster(self, cluster_id: str = None) -> 'VeilCluster':
         """Return VeilCluster entity."""
         return VeilCluster(client=self, api_object_id=cluster_id)
 
-    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None) -> 'VeilDataPool':
+    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None,
+                  resource_pool_id: str = None) -> 'VeilDataPool':
         """Return VeilDataPool entity."""
-        return VeilDataPool(client=self, api_object_id=data_pool_id, node_id=node_id, cluster_id=cluster_id)
+        return VeilDataPool(client=self, api_object_id=data_pool_id, node_id=node_id, cluster_id=cluster_id,
+                            resource_pool_id=resource_pool_id)
 
-    def node(self, node_id: str = None, cluster_id: str = None) -> 'VeilNode':
+    def node(self, node_id: str = None, cluster_id: str = None, resource_pool_id: str = None) -> 'VeilNode':
         """Return VeilNode entity."""
-        return VeilNode(client=self, api_object_id=node_id, cluster_id=cluster_id)
+        return VeilNode(client=self, api_object_id=node_id, cluster_id=cluster_id, resource_pool_id=resource_pool_id)
 
     def vdisk(self, vdisk_id: str = None) -> 'VeilVDisk':
         """Return VeilVDisk entity."""

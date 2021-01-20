@@ -144,6 +144,16 @@ class UuidStringType(NullableStringType):
             super().__set__(instance, value)
 
 
+class NullableUuidStringType(UuidStringType):
+    """Descriptor for nullable uuid checking."""
+
+    def __set__(self, instance, value):
+        """Check that value is None or can be converted to UUID."""
+        if value is None:
+            pass
+        super().__set__(instance, value)
+
+
 class VeilUrlStringType(StringType):
     """Check that string is a valid HTTP-address."""
 
@@ -203,3 +213,12 @@ def veil_api_response(func) -> 'VeilApiResponse':
                                    api_object=api_object)
         return resp  # pragma: no cover
     return wrapper
+
+
+class VeilEntityConfiguration:
+    """Abstract VeiL configuration."""
+
+    @property
+    def notnull_attrs(self) -> dict:
+        """Return only attributes with values."""
+        return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr]}

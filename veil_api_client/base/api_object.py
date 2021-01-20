@@ -9,10 +9,11 @@ except ImportError:  # pragma: no cover
 
 from .api_response import VeilApiResponse
 from .utils import (NullableIntType, NullableStringType,
-                    UuidStringType, argument_type_checker_decorator)
+                    UuidStringType, VeilEntityConfiguration,
+                    argument_type_checker_decorator,)
 
 
-class VeilRestPaginator:
+class VeilRestPaginator(VeilEntityConfiguration):
     """VeiL Paginator interface.
 
     Attributes:
@@ -33,11 +34,6 @@ class VeilRestPaginator:
         self.ordering = ordering
         self.limit = limit
         self.offset = offset
-
-    @property
-    def notnull_attrs(self) -> dict:
-        """Return only attributes with values."""
-        return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr]}
 
 
 class VeilApiObjectStatus:
