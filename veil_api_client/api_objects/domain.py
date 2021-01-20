@@ -9,16 +9,21 @@ except ImportError:  # pragma: no cover
     ClientResponse = None
 
 from ..base.api_object import VeilApiObject, VeilRestPaginator
-from ..base.utils import BoolType, StringType, UuidStringType, argument_type_checker_decorator
+from ..base.utils import (BoolType, NullableUuidStringType, StringType, UuidStringType,
+                          VeilEntityConfiguration,
+                          argument_type_checker_decorator)
 
 
-class DomainConfiguration:
+class DomainConfiguration(VeilEntityConfiguration):
     """Simplified Veil domain description.
 
     Structure for VeiL domain copy.
+    (resource_pool) and (node + datapool) are mutually exclusive parameters -> see mutually_check method
+
 
     Attributes:
         verbose_name: domain verbose name.
+        resource_pool: VeiL resource pool id(uuid).
         node: VeiL node id(uuid).
         datapool: VeiL data-pool id(uuid).
         parent: VeiL parent domain id(uuid).
@@ -26,18 +31,36 @@ class DomainConfiguration:
     """
 
     verbose_name = StringType('verbose_name')
-    node = UuidStringType('node')
-    datapool = UuidStringType('datapool')
+    resource_pool = NullableUuidStringType('resource_pool')
+    node = NullableUuidStringType('node')
+    datapool = NullableUuidStringType('datapool')
     parent = UuidStringType('parent')
     thin = BoolType('thin')
 
-    def __init__(self, verbose_name: str, node: str, datapool: str, parent: str, thin: bool = True) -> None:
+    def __init__(self, verbose_name: str,
+                 parent: str,
+                 resource_pool: str = None, node: str = None, datapool: str = None,
+                 thin: bool = True
+                 ) -> None:
         """Please see help(DomainConfiguration) for more info."""
-        self.verbose_name = verbose_name
+        self.resource_pool = resource_pool
         self.node = node
         self.datapool = datapool
+        self.verbose_name = verbose_name
         self.parent = parent
         self.thin = thin
+
+        self.mutually_check()
+
+    def mutually_check(self):
+        """Validate mutually exclusive parameters.
+
+        (resource_pool) and (node + datapool) are mutually exclusive parameters, so only one pair can be filled.
+        """
+        if self.resource_pool and (self.node or self.datapool):
+            raise ValueError(
+                '{} and ({} + {}) are mutually exclusive parameters, so only one pair can be filled.'.format(
+                    self.resource_pool, self.node, self.datapool))
 
 
 class MultiManagerAction(Enum):
@@ -146,15 +169,17 @@ class VeilDomain(VeilApiObject):
     Attributes:
         client: https_client instance.
         api_object_id: VeiL domain id(uuid).
-        cluster_id:  node_id: VeiL cluster id(uuid) for extra filtering.
-        node_id:  node_id: VeiL node id(uuid) for extra filtering.
-        data_pool_id:  node_id: VeiL data-pool id(uuid) for extra filtering.
+        resource_pool: Veil resource-pool id(uuid) for extra filtering.
+        cluster_id:  VeiL cluster id(uuid) for extra filtering.
+        node_id:  VeiL node id(uuid) for extra filtering.
+        data_pool_id:  VeiL data-pool id(uuid) for extra filtering.
         template:  VeiL template sign. Int because of ujson limitations (only str or int).
     """
 
     __API_OBJECT_PREFIX = 'domains/'
 
-    def __init__(self, client, api_object_id: str = None, cluster_id: str = None, node_id: str = None,
+    def __init__(self, client, api_object_id: str = None, resource_pool: str = None,
+                 cluster_id: str = None, node_id: str = None,
                  data_pool_id: str = None, template: int = None) -> None:
         """Please see help(VeilDomain) for more info.
 
@@ -175,7 +200,8 @@ class VeilDomain(VeilApiObject):
         self.user_power_state = 0
         self.guest_utils = None
         self.cpu_topology = None
-        # cluster_id, node_id or data_pool_id can be UUID.
+        # resource_pool, cluster_id, node_id or data_pool_id can be UUID.
+        self.resource_pool = str(resource_pool) if resource_pool else None
         self.cluster_id = str(cluster_id) if cluster_id else None
         self.node_id = str(node_id) if node_id else None
         self.data_pool_id = str(data_pool_id) if data_pool_id else None
@@ -201,12 +227,17 @@ class VeilDomain(VeilApiObject):
     @property
     def guest_agent(self):
         """Verbose domain guest utils."""
-        return DomainGuestUtils(**self.guest_utils)
+        return DomainGuestUtils(**self.guest_utils) if self.guest_utils else None
+
+    @property
+    def qemu_state(self):
+        """Guest agent qemu state."""
+        return self.guest_agent.qemu_state if self.guest_agent else None
 
     @property
     def first_ipv4(self):
         """First ipv4 address."""
-        return self.guest_agent.first_ipv4_ip if self.guest_utils else None
+        return self.guest_agent.first_ipv4_ip if self.guest_agent else None
 
     @property
     def power_state(self):
@@ -226,12 +257,12 @@ class VeilDomain(VeilApiObject):
     @property
     def hostname(self):
         """Guest utils hostname value."""
-        return self.guest_agent.hostname if self.guest_utils else None
+        return self.guest_agent.hostname if self.guest_agent else None
 
     @property
     def apipa_problem(self):
         """Guest utils apipa_problem value."""
-        return self.guest_agent.apipa_problem if self.guest_utils else None
+        return self.guest_agent.apipa_problem if self.guest_agent else None
 
     @property
     async def in_ad(self):
@@ -306,7 +337,7 @@ class VeilDomain(VeilApiObject):
     async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
         """Add a domain to one or more Active Directory groups."""
         print(
-            '\nWARNING: add_to_ad_group method scheduled for removal in 2.x. '
+            '\nWARNING: add_to_ad_group method scheduled for removal in 2.1.1 '
             'use your own LDAP command, like '
             'extend.microsoft.add_members_to_groups\n',
             file=sys.stderr,
@@ -411,7 +442,7 @@ class VeilDomain(VeilApiObject):
     async def create(self, domain_configuration: DomainConfiguration) -> 'ClientResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
-        response = await self._post(url=url, json_data=domain_configuration.__dict__)
+        response = await self._post(url=url, json_data=domain_configuration.notnull_attrs)
         return response
 
     async def remove(self, full: bool = True, force: bool = False) -> 'ClientResponse':
@@ -429,17 +460,19 @@ class VeilDomain(VeilApiObject):
         By default get only domains with vdisks.
         """
         extra_params = dict(with_vdisks=int(with_vdisks))
+        if self.resource_pool:
+            extra_params['resource_pool'] = self.resource_pool
         if self.cluster_id:
             extra_params['cluster'] = self.cluster_id
         if self.node_id:
             extra_params['node'] = self.node_id
         if self.data_pool_id:
             extra_params['datapool'] = self.data_pool_id
-        if isinstance(self.template, int):
-            extra_params['template'] = self.template
-        elif isinstance(self.template, bool):
+        if isinstance(self.template, bool):
             # ujson can`t work with booleans
             extra_params['template'] = int(self.template)
+        elif isinstance(self.template, int):
+            extra_params['template'] = self.template
         # Additional request parameters
         if fields and isinstance(fields, list):
             extra_params['fields'] = ','.join(fields)

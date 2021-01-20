@@ -71,7 +71,7 @@ class VeilApiResponse:
                     inst = self.__api_object.copy()
                     inst.update_public_attrs(result)
                     api_object_list.append(inst)
-            else:
+            elif isinstance(self.value, dict) and self.value.get('count', None) != 0:
                 inst = self.__api_object.copy()
                 inst.update_public_attrs(self.value)
                 api_object_list.append(inst)

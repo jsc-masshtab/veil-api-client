@@ -22,6 +22,7 @@ class VeilCluster(VeilApiObject):
         self.description = None
         self.memory_count = None
         self.vdi = None
+        self.nodes_count = None
 
     async def usage(self) -> 'VeilApiResponse':
         """Get minimum statistics of resource loading."""

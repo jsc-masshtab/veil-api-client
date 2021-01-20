@@ -4,27 +4,27 @@ verify_ssl = true
 name = "pypi"
 
 [dev-packages]
-flake8 = "==3.7.*"
-flake8-builtins = "==1.5.*"
-flake8-bugbear = "==19.8.*"
-flake8-import-order= "==0.18.*"
-flake8-docstrings = "==1.5.*"
-flake8-quotes = "==3.0.*"
-coverage = "==5.1"
+flake8 = "*"
+flake8-builtins = "*"
+flake8-bugbear = "*"
+flake8-import-order= "*"
+flake8-docstrings = "*"
+flake8-quotes = "*"
+coverage = "*"
 pytest = "*"
 pytest-flake8 = "*"
 pytest-cov = "*"
-uvloop = "==0.14.*"
+uvloop = "*"
 setuptools = "*"
 wheel = "*"
-pytest-asyncio = "==0.14.*"
-async_generator = "==1.10.*"
-pytest-aiohttp = "==0.3.*"
+pytest-asyncio = "*"
+async_generator = "*"
+pytest-aiohttp = "*"
 
 [packages]
 aiohttp = "==3.6.*"
 ujson = "==3.0.*"
 pymemcache = "==3.2.*"
 
-#[requires]
-#python_version = "3.5"
+[requires]
+python_version = "3.5"
