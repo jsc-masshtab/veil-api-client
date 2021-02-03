@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil resource-pool entity."""
-from typing import Optional
-
-from ..base import VeilApiObject, VeilApiResponse, VeilRestPaginator, VeilRetryConfiguration
+from ..base.api_object import VeilApiObject, VeilRestPaginator
+from ..base.api_response import VeilApiResponse
 
 
 class VeilResourcePool(VeilApiObject):
@@ -17,16 +16,11 @@ class VeilResourcePool(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'resource-pools/'
 
-    def __init__(self, client,
-                 api_object_id: Optional[str] = None,
-                 node_id: Optional[str] = None,
-                 cluster_id: Optional[str] = None,
-                 retry_opts: Optional[VeilRetryConfiguration] = None) -> None:
+    def __init__(self, client, api_object_id: str = None, node_id: str = None, cluster_id: str = None) -> None:
         """Please see help(VeilResourcePool) for more info."""
-        super().__init__(client,
-                         api_object_id=api_object_id,
-                         api_object_prefix=self.__API_OBJECT_PREFIX,
-                         retry_opts=retry_opts)
+        # TODO: organization entity?
+        # TODO: cluster entity?
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.hints = None
         self.tags = None
         self.domains_count = None
@@ -58,7 +52,7 @@ class VeilResourcePool(VeilApiObject):
         self.node_id = str(node_id) if node_id else None
         self.cluster_id = str(cluster_id) if cluster_id else None
 
-    async def list(self, paginator: VeilRestPaginator = None) -> 'VeilApiResponse':  # noqa: A003, E501
+    async def list(self, paginator: VeilRestPaginator = None) -> 'VeilApiResponse':  # noqa
         """Get list of resource-pools with filters."""
         extra_node_param = {'node': self.node_id} if self.node_id else dict()
         extra_cluster_param = {'cluster': self.cluster_id} if self.cluster_id else dict()

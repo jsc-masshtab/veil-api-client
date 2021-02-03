@@ -1,7 +1,7 @@
 [![Python 3.5](https://img.shields.io/badge/python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
-[![Coverage](https://img.shields.io/static/v1?label=coverage&message=48%&color=red)](https://coverage.readthedocs.io/en/coverage-5.1/)
+[![Coverage](https://img.shields.io/static/v1?label=coverage&message=49%&color=red)](https://coverage.readthedocs.io/en/coverage-5.1/)
 
 # VeiL api client 
 Предназначен для упрощения интеграции между конечным приложением/скриптом и ECP VeiL. Если вы не хотите слишком глубоко 
@@ -26,7 +26,7 @@
 from veil_api_client import VeilClient, VeilClientSingleton 
 
 # Дополнительные параметры клиента для продвинутого использования
-from veil_api_client import VeilCacheOptions, VeilRetryConfiguration 
+from veil_api_client import VeilCacheOptions, VeilRetryOptions 
 
 # Сущность пагинатора в ответе
 from veil_api_client import VeilRestPaginator
@@ -71,71 +71,6 @@ async def simple_main():
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(simple_main())
-```
-
-#### Примеры использования тэгов
-```
-# Список тэгов
-tags_response = await session.tag().list()
-
-# Создание тэга
-new_tag1 = TagConfiguration(verbose_name='tag9', slug='tag9_slug')
-tag1_response = await session.tag().create(new_tag1)
-if tag1_response.success:
-    task = tag1_response.task  # Таска создания нового тега
-    new_uid = task.first_entity  # идентификатор создаваемой сущности
-
-# Информация по тэгу
-tag_response = await session.tag(new_uid).info()
-# Сущность тега
-tag = tag_response.response[0]
-
-# Прикрепление сущности к тэгу
-entity = VeilEntityConfiguration(entity_uuid='01747df8-bdc6-4a50-9747-3e59ef5d4868',
-                                 entity_class='domain')
-entity_response = await tag.add_entity(entity_configuration=entity)
-if entity_response.success:
-    print('Успешное прикрепление')
-
-# Прикрепление нескольких сущностей к тэгу
-entity1 = VeilEntityConfiguration(entity_uuid='01747df8-bdc6-4a50-9747-3e59ef5d4868',
-                                  entity_class='domain')
-entity2 = VeilEntityConfiguration(entity_uuid='67e45225-db3f-4474-b334-e8d83ef89a2a',
-                                  entity_class='domain')
-entity_response = await tag.add_entities(entities_conf=[entity1, entity2])
-if entity_response.success:
-     print('Успешное множественное прикрепление')
-
-# Редактирование тэга
-update_response = await tag.update(colour='#ff0000', verbose_name='newname')
-if update_response.success:
-     print('Успешное редактирование')
-
-# Открепление сущности от тэга
-tag = session.tag('581d2c2b-1f1b-4807-953a-c0e80e8a943b')
-await tag.info()#
-entity = VeilEntityConfiguration(entity_uuid='01747df8-bdc6-4a50-9747-3e59ef5d4868',
-                                 entity_class='domain')
-
-entity_response = await tag.remove_entity(entity_configuration=entity)
-if entity_response.success:
-    print('Успешное открепление')
-
-# Открепление сущностей от тэга
-tag = session.tag('3cacf9f1-7107-45de-bd9d-55d8d6e7eeb3')
-await tag.info()
-entity1 = VeilEntityConfiguration(entity_uuid='01747df8-bdc6-4a50-9747-3e59ef5d4868',
-                                  entity_class='domain')
-entity2 = VeilEntityConfiguration(entity_uuid='67e45225-db3f-4474-b334-e8d83ef89a2a',
-                                  entity_class='domain')
-entity_response = await tag.remove_entities(entities_conf=[entity1, entity2])
-if entity_response.success:
-     print('Успешное множественное открепление')
-
-# Удаление
-remove_response = await tag.remove()
-if remove_response.success:
-     print('Успешное удаление')
 ```
 
 ### Постоянно запущенное приложение
@@ -202,7 +137,7 @@ async def extra_main():
     # При проверке статуса проверяется именно тот статус, который пришел в ответе. Предположим мы хотим повторы для всех
     # вм, что не удалось найти
     veil_client = YobaVeilClientSingleton(
-        VeilRetryConfiguration(status_codes={404}, timeout_increase_step=5, num_of_attempts=3))
+        VeilRetryOptions(status_codes={404}, timeout_increase_step=5, num_of_attempts=3))
 
     # Добавляем подключение к первому контроллеру
     session1 = veil_client.add_client(server, token)
@@ -249,10 +184,8 @@ loop.run_until_complete(extra_main())
 * Нода (узел, сервер) - VeilClient.node()
 * Задача - VeilClient.task()
 * Виртуальный диск - VeilClient.vdisk()
-* Тэги - VeilClient.tag()
-
 Если при инициализации сущности не был передан id сущности, то есть возможность работы только с обобщенными методами
-вроде list(). Если вы хотите иметь доступ к методам конкретной сущности — необходимо указать ее id.
+вроде list(). Если вы хотите иметь доступ к методам конкретной сущности - необходимо указать ее id.
 
 ### Основные методы сущностей
 * list() - асинхронный метод для получения списка сущностей на VeiL, использует переопределяемый пагинатор. Если сущностей
@@ -285,7 +218,7 @@ loop.run_until_complete(extra_main())
 * token - токен интеграции VeiL
 * timeout - aiohttp.ClientSession общий таймаут
 * cache_opts - VeilCacheOptions
-* retry_opts - VeilRetryConfiguration
+* retry_opts - VeilRetryOptions
 
 #### VeilCacheOptions
 Минимальное кеширование ответов. Скорее всего будет исключено из пакета, т.к. настройки кеширования очень своеобразная
@@ -294,7 +227,7 @@ loop.run_until_complete(extra_main())
 * server - адрес подключения к хранилищу кэша
 * ttl - время жизни записи в кэше
 
-#### VeilRetryConfiguration
+#### VeilRetryOptions
 num_of_attempts - количество повторов
 timeout - время ожидания перед повтором (с экспоненциальным ростом)
 max_timeout - максимальное время ожидания между попытками

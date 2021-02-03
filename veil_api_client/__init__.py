@@ -5,19 +5,16 @@
 for additional info see README.md
 """
 
-__version__ = '2.2.0'
+__version__ = '2.1.2'
 
-from .api_objects.domain import (DomainBackupConfiguration, DomainConfiguration, DomainTcpUsb,
-                                 VeilDomain, VeilGuestAgentCmd, )
-from .base import TagConfiguration, VeilCacheOptions, VeilRestPaginator, VeilTag
-from .base.utils import VeilEntityConfiguration
-from .https_client import VeilClient, VeilClientSingleton, VeilRetryConfiguration
+from .api_objects.domain import DomainConfiguration, DomainTcpUsb, VeilDomain, VeilGuestAgentCmd
+from .base.api_cache import VeilCacheOptions
+from .base.api_object import VeilRestPaginator
+from .https_client import VeilClient, VeilClientSingleton, VeilRetryOptions
 
 __all__ = (
-    'VeilClient', 'VeilRestPaginator', 'DomainConfiguration', 'VeilClientSingleton',
-    'VeilCacheOptions', 'TagConfiguration', 'VeilEntityConfiguration',
-    'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilRetryConfiguration', 'VeilDomain',
-    'DomainBackupConfiguration', 'VeilTag'
+    'VeilClient', 'VeilRestPaginator', 'DomainConfiguration', 'VeilClientSingleton', 'VeilCacheOptions',
+    'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilRetryOptions', 'VeilDomain'
 )
 
 __author__ = 'Aleksey Devyatkin <a.devyatkin@mashtab.org>'

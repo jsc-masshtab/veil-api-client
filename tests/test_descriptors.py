@@ -40,7 +40,7 @@ class TestAttributeDescriptors:
         except TypeError:
             raise AssertionError()
         else:
-            assert getattr(self._instance_class_being_tested, class_argument, good_value) == good_value  # noqa: E501
+            assert getattr(self._instance_class_being_tested, class_argument, good_value) == good_value
         try:
             setattr(self._instance_class_being_tested, class_argument, bad_value)
         except TypeError:
