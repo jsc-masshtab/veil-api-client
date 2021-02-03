@@ -38,20 +38,13 @@ class TestVeilRestPaginator:
 class TestVeilApiObject:
     """VeilApiObject test cases."""
 
-    # def test_init_1(self):
-    #     """Test case with bad client instance in init."""
-    #     try:
-    #         VeilApiObject(client=None, api_object_prefix='domain')
-    #     except TypeError as err:
-    #         assert str(err) == "None is not a <class \'veil_api_client.base.api_client.VeilApiClient\'>"
-    #     else:
-    #         raise AssertionError()
-
     @pytest.mark.asyncio
     async def test_init_2(self, veil_client):
         """Test case with bad api_object_id in init."""
         try:
-            VeilApiObject(client=veil_client, api_object_prefix='domain', api_object_id='badUUID')
+            VeilApiObject(client=veil_client,
+                          api_object_prefix='domain',
+                          api_object_id='badUUID')
         except TypeError as err:
             assert str(err) == 'badUUID is not a uuid string.'
         else:
