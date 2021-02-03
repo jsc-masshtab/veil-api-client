@@ -60,7 +60,7 @@ class DictSerde:
     """Veil api response serializer for memcached."""
 
     @staticmethod
-    def serialize(key, value):
+    def serialize(key, value):  # noqa
         """Serialize VeilApiResponse to bytes."""
         if isinstance(value, str):
             return value.encode('utf-8'), 1
@@ -69,7 +69,7 @@ class DictSerde:
         raise Exception('Unknown serialization format')
 
     @staticmethod
-    def deserialize(key, value, flags):
+    def deserialize(key, value, flags):  # noqa
         """Deserialize bytes to dict."""
         if flags == 1:
             return value.decode('utf-8')
@@ -84,13 +84,13 @@ def cached_response(func):
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         # TODO: функции set и get нужно вынести выше, чтобы можно было переопределить
-        # TODO: класс клиента принимающий в конструктор класс из библиотеки и содержащий
-        #  методы set и get, которые делают super() нужно класса
+        # TODO: класс клиента принимающий в конструктор класс из библиотеки и содержащий методы set и get,
+        #  которые делают super() нужно класса
         # TODO: время жизни в параметрах клиента
         # TODO: use PooledClient
-        # TODO: https://pymemcache.readthedocs.io/en/latest/getting_started.html
+        # TODO: best practices from https://pymemcache.readthedocs.io/en/latest/getting_started.html
 
-        cache_opts = args[0]._cache_opts
+        cache_opts = args[0]._cache_opts  # noqa
         # cache options must be set
         if not cache_opts:
             return await func(*args, **kwargs)

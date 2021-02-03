@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Veil cluster entity."""
-from typing import Optional
-
-from ..base import VeilApiObject, VeilApiResponse, VeilRetryConfiguration
+from ..base.api_object import VeilApiObject
+from ..base.api_response import VeilApiResponse
 
 
 class VeilCluster(VeilApiObject):
@@ -15,14 +14,9 @@ class VeilCluster(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'clusters/'
 
-    def __init__(self, client,
-                 api_object_id: Optional[str] = None,
-                 retry_opts: Optional[VeilRetryConfiguration] = None) -> None:
+    def __init__(self, client, api_object_id: str = None) -> None:
         """Please see help(VeilCluster) for more info."""
-        super().__init__(client,
-                         api_object_id=api_object_id,
-                         api_object_prefix=self.__API_OBJECT_PREFIX,
-                         retry_opts=retry_opts)
+        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
         self.cpu_count = None
         self.created = None
         self.description = None
