@@ -21,7 +21,7 @@ class VeilApiResponse:
         task: VeilTask if response status_code is 202.
         success: success flag of response.
         error_code: VeiL error code from response. If there are several errors - only 1st will be returned.
-        error_detail: VeiL error detail from response. If there are several errors - only 1st will be returned.
+        error_detail: VeiL error detail from response. If there are several errors - only 1st will be returned.  # noqa: E501
 
     """
 
@@ -37,11 +37,20 @@ class VeilApiResponse:
             logger.warning('request status code is %s', status_code)
             logger.warning('response data: %s', data)
 
+    def __repr__(self):
+        """Original repr and additional info."""
+        original_repr = super().__repr__()
+        return '{} : {}: {}'.format(original_repr, self.status_code, self.response)
+
+    def __str__(self):
+        """Just verbose_name."""
+        return '{}: {}'.format(self.status_code, self.response)
+
     @property
     def paginator_results(self) -> list:
         """Value of results key from response data. May presents only in list() queries."""
-        # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
-        if self.status_code != 200 or not isinstance(self.data, dict) or 'results' not in self.data.keys():
+        # Экспериментальный блок - нет уверенности, что у VeiL все ответы такие.
+        if self.status_code != 200 or not isinstance(self.data, dict) or 'results' not in self.data.keys():  # noqa: E501
             return list()
         else:
             return self.data['results']
@@ -49,7 +58,7 @@ class VeilApiResponse:
     @property
     def value(self) -> dict:
         """Value of single-count entity from response data. May present in info() query."""
-        # Эксперементальный блок - нет уверенности, что у VeiL все ответы такие.
+        # Экспериментальный блок - нет уверенности, что у VeiL все ответы такие.
         if self.status_code != 200 or not isinstance(self.data, dict):
             return dict()
         else:
@@ -80,7 +89,7 @@ class VeilApiResponse:
     @property
     def task(self):
         """Return VeilTask if response is 202."""
-        if self.status_code != 202 or not isinstance(self.data, dict) or not self.data.get('_task'):
+        if self.status_code != 202 or not isinstance(self.data, dict) or not self.data.get('_task'):  # noqa: E501
             return
         task_inst = self.__api_object.task
         task_inst.update_public_attrs(self.data['_task'])
@@ -99,7 +108,7 @@ class VeilApiResponse:
              If response is successful error_code will be 0.
              If error_code can`t be determined value will be 50000.
 
-        Example of VeiL error response: {'errors': [{'code': '50004', 'detail': 'URL is not found.'}]}
+        Example of VeiL error response: {'errors': [{'code': '50004', 'detail': 'URL is not found.'}]}  # noqa: E501
         """
         if self.success:
             return 0
@@ -124,7 +133,7 @@ class VeilApiResponse:
              If response is successful error_code will be None.
              If error_detail can`t be determined value will be None.
 
-        Example of VeiL error response: {'errors': [{'code': '50004', 'detail': 'URL is not found.'}]}
+        Example of VeiL error response: {'errors': [{'code': '50004', 'detail': 'URL is not found.'}]}  # noqa: E501
         """
         if self.success:
             return

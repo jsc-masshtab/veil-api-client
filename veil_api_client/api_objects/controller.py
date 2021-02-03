@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Veil controller entity."""
-from ..base.api_object import VeilApiObject
-from ..base.api_response import VeilApiResponse
+from typing import Optional
+
+from ..base import VeilApiObject, VeilApiResponse, VeilRetryConfiguration
 
 
 class VeilController(VeilApiObject):
@@ -14,9 +15,13 @@ class VeilController(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'controllers/'
 
-    def __init__(self, client, api_object_id: str = None) -> None:
+    def __init__(self, client, api_object_id: Optional[str] = None,
+                 retry_opts: Optional[VeilRetryConfiguration] = None) -> None:
         """Please see help(VeilController) for more info."""
-        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client,
+                         api_object_id=api_object_id,
+                         api_object_prefix=self.__API_OBJECT_PREFIX,
+                         retry_opts=retry_opts)
         self.version = None
 
     async def base_version(self) -> 'VeilApiResponse':

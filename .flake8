@@ -1,5 +1,5 @@
 [flake8]
 inline-quotes = single
-max-line-length = 120
+max-line-length = 95
 
 exclude = .git, __pycache__, venv/, env/, app.py, build/

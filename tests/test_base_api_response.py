@@ -34,7 +34,7 @@ class TestVeilApiResponse:
     async def api_response_401(request):
         """Fake VeiL ECP response."""
         return web.json_response(
-            data="{\'errors\': [{\'detail\': \'Signature has expired.\', \'code\': \'invalid\'}]}",
+            data="{\'errors\': [{\'detail\': \'Signature has expired.\', \'code\': \'invalid\'}]}",  # noqa: E501
             status=401)
 
     @staticmethod
