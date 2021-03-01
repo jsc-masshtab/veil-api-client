@@ -38,45 +38,42 @@ class TestVeilRestPaginator:
 class TestVeilApiObject:
     """VeilApiObject test cases."""
 
-    # def test_init_1(self):
-    #     """Test case with bad client instance in init."""
-    #     try:
-    #         VeilApiObject(client=None, api_object_prefix='domain')
-    #     except TypeError as err:
-    #         assert str(err) == "None is not a <class \'veil_api_client.base.api_client.VeilApiClient\'>"
-    #     else:
-    #         raise AssertionError()
-
     @pytest.mark.asyncio
-    async def test_init_2(self, veil_client):
+    async def test_init_2(self, veil_cli):
         """Test case with bad api_object_id in init."""
         try:
-            VeilApiObject(client=veil_client, api_object_prefix='domain', api_object_id='badUUID')
+            VeilApiObject(client=veil_cli,
+                          api_object_prefix='domain',
+                          api_object_id='badUUID')
         except TypeError as err:
             assert str(err) == 'badUUID is not a uuid string.'
         else:
             raise AssertionError()
 
     @pytest.mark.asyncio
-    async def test_init_3(self, veil_client):
+    async def test_init_3(self, veil_cli):
         """Test case with minimal init attributes."""
         try:
-            obj = VeilApiObject(client=veil_client, api_object_prefix='domain')
+            obj = VeilApiObject(client=veil_cli, api_object_prefix='domain')
         except TypeError:
             raise AssertionError()
         else:
             assert isinstance(obj, VeilApiObject)
 
     @pytest.mark.asyncio
-    async def test_init_4(self, veil_client):
+    async def test_init_4(self, veil_cli):
         """Test case with good api_object_id in init."""
         try:
-            obj = VeilApiObject(client=veil_client, api_object_prefix='domain',
+            obj = VeilApiObject(client=veil_cli, api_object_prefix='domain',
                                 api_object_id='eafc39f3-ce6e-4db2-9d4e-1d93babcbe26')
         except TypeError:
             raise AssertionError()
         else:
             assert isinstance(obj, VeilApiObject)
+        obj.verbose_name = 'test_verbose'
+
+        assert 'eafc39f3-ce6e-4db2-9d4e-1d93babcbe26 : test_verbose - domain' in obj.__str__()
+        assert 'eafc39f3-ce6e-4db2-9d4e-1d93babcbe26 : test_verbose' in obj.__repr__()
 
     def test_api_object_uuid(self, api_object):
         """Test case for api object uuid property."""

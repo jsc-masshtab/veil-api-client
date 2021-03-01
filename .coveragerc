@@ -17,5 +17,8 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
 
+ignore_errors = False
+fail_under = 70
+
 [html]
 directory = tests/htmlcov
