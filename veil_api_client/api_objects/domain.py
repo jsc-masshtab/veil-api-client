@@ -2,23 +2,27 @@
 """Veil domain entity."""
 import sys
 from enum import Enum, IntEnum
+from typing import List, Optional
+from uuid import uuid4
 
 try:
     from aiohttp.client_reqrep import ClientResponse
 except ImportError:  # pragma: no cover
     ClientResponse = None
 
-from ..base.api_object import VeilApiObject, VeilRestPaginator
-from ..base.utils import (BoolType, NullableUuidStringType, StringType, UuidStringType,
-                          VeilEntityConfiguration,
+from ..base import (VeilApiObject, VeilCacheConfiguration,
+                    VeilRestPaginator, VeilRetryConfiguration)
+from ..base.utils import (BoolType, NullableBoolType, NullableStringType,
+                          NullableUuidStringType, StringType,
+                          UuidStringType, VeilConfiguration,
                           argument_type_checker_decorator)
 
 
-class DomainConfiguration(VeilEntityConfiguration):
+class DomainConfiguration(VeilConfiguration):
     """Simplified Veil domain description.
 
     Structure for VeiL domain copy.
-    (resource_pool) and (node + datapool) are mutually exclusive parameters -> see mutually_check method
+    (resource_pool) and (node + datapool) are mutually exclusive parameters -> see mutually_check method  # noqa: E501
 
 
     Attributes:
@@ -39,28 +43,78 @@ class DomainConfiguration(VeilEntityConfiguration):
 
     def __init__(self, verbose_name: str,
                  parent: str,
-                 resource_pool: str = None, node: str = None, datapool: str = None,
-                 thin: bool = True
+                 resource_pool: Optional[str] = None,
+                 node: Optional[str] = None,
+                 datapool: Optional[str] = None,
+                 thin: bool = True,
+                 count: int = 1
                  ) -> None:
         """Please see help(DomainConfiguration) for more info."""
         self.resource_pool = resource_pool
         self.node = node
         self.datapool = datapool
+        self.mutually_check()
         self.verbose_name = verbose_name
         self.parent = parent
         self.thin = thin
-
-        self.mutually_check()
+        self.count = count
+        self.domains_ids = [str(uuid4()) for i in range(count)]
 
     def mutually_check(self):
         """Validate mutually exclusive parameters.
 
-        (resource_pool) and (node + datapool) are mutually exclusive parameters, so only one pair can be filled.
+        (resource_pool) and (node + datapool) are mutually exclusive parameters, so only one pair can be filled.  # noqa: E501
         """
         if self.resource_pool and (self.node or self.datapool):
             raise ValueError(
-                '{} and ({} + {}) are mutually exclusive parameters, so only one pair can be filled.'.format(
+                '{} and ({} + {}) are mutually exclusive parameters, so only one pair can be filled.'.format(  # noqa: E501
                     self.resource_pool, self.node, self.datapool))
+
+
+class DomainUpdateConfiguration(VeilConfiguration):
+    """Simplified Veil DomainUpdate description.
+
+    Attributes:
+        verbose_name: domain verbose name.
+        description: domain description.
+        os_type: domain os_type.
+        os_version: domain os_version.
+        tablet: tablet switcher.
+        start_on_boot: start on boot switcher.
+        spice_stream: spice stream switcher.
+    """
+
+    verbose_name = NullableStringType('verbose_name')
+    description = NullableStringType('description')
+    os_type = NullableStringType('os_type')
+    os_version = NullableStringType('os_version')
+    tablet = NullableBoolType('tablet')
+    start_on_boot = NullableBoolType('start_on_boot')
+    spice_stream = NullableBoolType('spice_stream')
+
+    def __init__(self,
+                 verbose_name: Optional[str] = None,
+                 description: Optional[str] = None,
+                 os_type: Optional[str] = None,
+                 os_version: Optional[str] = None,
+                 tablet: Optional[bool] = None,
+                 start_on_boot: Optional[bool] = None,
+                 spice_stream: Optional[bool] = None):
+        """Please see help(DomainUpdateConfiguration) for more info."""
+        self.verbose_name = verbose_name
+        self.description = description
+        self.os_type = os_type
+        self.os_version = os_version
+        self.tablet = tablet
+        self.start_on_boot = start_on_boot
+        self.spice_stream = spice_stream
+        self.no_empty_check()
+
+    def no_empty_check(self):
+        """Checking that there is something to change."""  # noqa: D401
+        if not self.notnull_attrs:
+            raise ValueError(
+                'All attributes are empty. Choose at least something.')
 
 
 class MultiManagerAction(Enum):
@@ -132,8 +186,13 @@ class VeilGuestAgentCmd(Enum):
 class DomainGuestUtils:
     """Guest utils attributes."""
 
-    def __init__(self, veil_state: bool = False, qemu_state: bool = False, version: str = None, hostname: str = None,
-                 ipv4: list = None, **_) -> None:
+    def __init__(self,
+                 veil_state: bool = False,
+                 qemu_state: bool = False,
+                 version: Optional[str] = None,
+                 hostname: Optional[str] = None,
+                 ipv4: Optional[list] = None,
+                 **_) -> None:
         """Please see help(DomainGuestUtils) for more info."""
         self.veil_state = veil_state
         self.qemu_state = qemu_state
@@ -163,6 +222,46 @@ class DomainGuestUtils:
         return all(isinstance(ip, str) and apipa_case in ip for ip in self.ipv4)
 
 
+class DomainBackupConfiguration(VeilConfiguration):
+    """Domain backup options.
+
+    Attributes:
+        datapool: datapool_uid on which the backup will be created.
+        backup: backup_uid of previous backup file with activated can_be_incremental.
+        can_be_incremental: create a backup with the possibility of further increment.
+        increment: increments the last of the available backups with the ability to increment,
+            if there are none, then creates a new incremental backup.
+        exclude_iso: exclude attached to Domain (VM) ISO from backup.
+
+    Note:
+        1. for thin-clones backup mechanism prohibited on VeiL ECP.
+        2. datapool may be set only if backup is empty
+    """
+
+    datapool = NullableUuidStringType('datapool')
+    backup = NullableUuidStringType('datapool')
+    can_be_incremental = BoolType('can_be_incremental')
+    increment = BoolType('increment')
+    exclude_iso = BoolType('exclude_iso')
+
+    def __init__(self,
+                 datapool: Optional[str] = None,
+                 backup: Optional[str] = None,
+                 can_be_incremental: Optional[bool] = False,
+                 increment: Optional[bool] = False,
+                 exclude_iso: Optional[bool] = True,
+                 **_) -> None:
+        """Please see help(VeilDomain) for more info.
+
+        :param _: may be save_files, limit_days - only for scheduled jobs. Ignored in client.
+        """
+        self.datapool = datapool
+        self.backup = backup
+        self.can_be_incremental = can_be_incremental
+        self.increment = increment
+        self.exclude_iso = exclude_iso
+
+
 class VeilDomain(VeilApiObject):
     """Veil domain entity.
 
@@ -178,15 +277,25 @@ class VeilDomain(VeilApiObject):
 
     __API_OBJECT_PREFIX = 'domains/'
 
-    def __init__(self, client, api_object_id: str = None, resource_pool: str = None,
-                 cluster_id: str = None, node_id: str = None,
-                 data_pool_id: str = None, template: int = None) -> None:
+    def __init__(self, client,
+                 api_object_id: Optional[str] = None,
+                 resource_pool: Optional[str] = None,
+                 cluster_id: Optional[str] = None,
+                 node_id: Optional[str] = None,
+                 data_pool_id: Optional[str] = None,
+                 template: Optional[int] = None,
+                 retry_opts: Optional[VeilRetryConfiguration] = None,
+                 cache_opts: Optional[VeilCacheConfiguration] = None) -> None:
         """Please see help(VeilDomain) for more info.
 
         Arguments:
             template: Boolean int (0|1).
         """
-        super().__init__(client, api_object_id=api_object_id, api_object_prefix=self.__API_OBJECT_PREFIX)
+        super().__init__(client,
+                         api_object_id=api_object_id,
+                         api_object_prefix=self.__API_OBJECT_PREFIX,
+                         retry_opts=retry_opts,
+                         cache_opts=cache_opts)
         self.remote_access = None
         self.verbose_name = None
         self.node = None
@@ -200,6 +309,15 @@ class VeilDomain(VeilApiObject):
         self.user_power_state = 0
         self.guest_utils = None
         self.cpu_topology = None
+        self.tags = None
+        self.owners = None
+        self.sound = None
+        self.cpu_type = None
+        self.memory_count = None
+        self.vdisks = None
+        self.video = None
+        self.is_ova = None
+        self.cdroms = None
         # resource_pool, cluster_id, node_id or data_pool_id can be UUID.
         self.resource_pool = str(resource_pool) if resource_pool else None
         self.cluster_id = str(cluster_id) if cluster_id else None
@@ -267,11 +385,20 @@ class VeilDomain(VeilApiObject):
     @property
     async def in_ad(self):
         """Windows domain (VM) already in AD."""
+        print(
+            '\nWARNING: in_ad scheduled for removal in 2.2.1 '
+            'use is_in_ad method.\n',
+            file=sys.stderr,
+        )
+        return await self.is_in_ad()
+
+    async def is_in_ad(self) -> bool:
+        """Windows domain (VM) already in AD."""
         qemu_guest_command = {'path': 'powershell.exe',
                               'arg': ['(Get-WmiObject Win32_ComputerSystem).PartOfDomain']}
         response = await self.guest_command(qemu_cmd='guest-exec', f_args=qemu_guest_command)
         if response.status_code == 200 and response.value:
-            guest_exec_response = response.value.get('guest-exec', dict()).get('out-data', 'False')
+            guest_exec_response = response.value.get('guest-exec', dict()).get('out-data', 'False')  # noqa: E501
             if isinstance(guest_exec_response, str):
                 guest_exec_response = guest_exec_response.strip()
                 return guest_exec_response == 'True'
@@ -282,7 +409,9 @@ class VeilDomain(VeilApiObject):
         return self.api_object_url + action
 
     @argument_type_checker_decorator
-    async def guest_command(self, veil_cmd: VeilGuestAgentCmd = None, qemu_cmd: str = None, f_args: dict = None,
+    async def guest_command(self, veil_cmd: VeilGuestAgentCmd = None,
+                            qemu_cmd: str = None,
+                            f_args: dict = None,
                             timeout: int = 5):
         """Guest agent commands endpoint."""
         url = self.api_object_url + 'guest-command/'
@@ -306,8 +435,12 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def add_to_ad(self, domain_name: str, login: str, password: str, restart: bool = True,
-                        new_name: str = None) -> 'ClientResponse':
+    async def add_to_ad(self,
+                        domain_name: str,
+                        login: str,
+                        password: str,
+                        restart: bool = True,
+                        new_name: Optional[str] = None) -> 'ClientResponse':
         """Add domain (VM) to AD.
 
         domain_name: str Specifies the domain to which the computers are added
@@ -325,7 +458,10 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def rm_from_ad(self, login: str, password: str, restart: bool = True) -> 'ClientResponse':
+    async def rm_from_ad(self,
+                         login: str,
+                         password: str,
+                         restart: bool = True) -> 'ClientResponse':
         """Remove domain (VM) from AD."""
         url = self.api_object_url + 'rm-from-ad/'
         body = dict(login=login, password=password)
@@ -334,27 +470,35 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def add_to_ad_group(self, computer_name: str, domain_username: str, domain_password: str, cn_pattern: str):
+    async def add_to_ad_group(self, computer_name: str,
+                              domain_username: str,
+                              domain_password: str,
+                              cn_pattern: str):
         """Add a domain to one or more Active Directory groups."""
         print(
-            '\nWARNING: add_to_ad_group method scheduled for removal in 2.1.1 '
+            '\nWARNING: add_to_ad_group method scheduled for removal in 2.3 '
             'use your own LDAP command, like '
             'extend.microsoft.add_members_to_groups\n',
             file=sys.stderr,
         )
         credential_value = '$(New-Object System.Management.Automation.PsCredential("{}", \
-                                    $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format(
+                                    $(ConvertTo-SecureString -String "{}" -AsPlainText -Force)))'.format(  # noqa: E501
             domain_username, domain_password)
-        get_computer_filter = "Get-ADComputer -Identity '{}' -Properties 'SID' -Credential {}".format(computer_name,
-                                                                                                      credential_value)
-        add_group_filter = "Add-ADPrincipalGroupMembership -MemberOf '{}' -Credential {}".format(cn_pattern,
-                                                                                                 credential_value)
-        qemu_guest_command = {'path': 'powershell.exe', 'arg': [get_computer_filter, '|', add_group_filter]}
+        get_computer_filter = "Get-ADComputer -Identity '{}' -Properties 'SID' -Credential {}".format(computer_name,  # noqa: E501
+                                                                                                      credential_value)  # noqa: E501
+        add_group_filter = "Add-ADPrincipalGroupMembership -MemberOf '{}' -Credential {}".format(cn_pattern,  # noqa: E501
+                                                                                                 credential_value)  # noqa: E501
+        qemu_guest_command = {'path': 'powershell.exe', 'arg': [get_computer_filter, '|', add_group_filter]}  # noqa: E501
         return await self.guest_command(qemu_cmd='guest-exec', f_args=qemu_guest_command)
 
-    async def attach_usb(self, action_type: str = 'tcp_usb_device', usb: dict = None, usb_controller: dict = None,
-                         tcp_usb: DomainTcpUsb = None, no_task: bool = False):
+    async def attach_usb(self, action_type: Optional[str] = None,
+                         usb: Optional[dict] = None,
+                         usb_controller: Optional[dict] = None,
+                         tcp_usb: Optional[DomainTcpUsb] = None,
+                         no_task: bool = False):
         """Attach usb devices to VM."""
+        if action_type is None:
+            action_type = 'tcp_usb_device'
         url = self.api_object_url + 'attach-usb/'
         body = dict(action_type=action_type)
         if usb and isinstance(usb, dict):
@@ -367,9 +511,13 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body, extra_params=extra_params)
         return response
 
-    async def detach_usb(self, action_type: str = 'tcp_usb_device', controller_order: int = None, usb: str = None,
+    async def detach_usb(self, action_type: Optional[str] = None,
+                         controller_order: Optional[int] = None,
+                         usb: Optional[str] = None,
                          remove_all: bool = True):
         """Detach usb devices from VM."""
+        if action_type is None:
+            action_type = 'tcp_usb_device'
         url = self.api_object_url + 'detach-usb/'
         body = dict(action_type=action_type)
         if controller_order and isinstance(controller_order, int):
@@ -445,6 +593,20 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=domain_configuration.notnull_attrs)
         return response
 
+    @argument_type_checker_decorator
+    async def update(self,
+                     domain_update_configuration: DomainUpdateConfiguration) -> 'ClientResponse':  # noqa: E501
+        """Run VeiL ECP domain update endpoint."""
+        url = self.api_object_url
+        response = await self._put(url=url,
+                                   json_data=domain_update_configuration.notnull_attrs)
+        return response
+
+    async def update_verbose_name(self, verbose_name: str):
+        """Interface for Veil ECP domain update endpoint."""
+        conf = DomainUpdateConfiguration(verbose_name=verbose_name)
+        return await self.update(domain_update_configuration=conf)
+
     async def remove(self, full: bool = True, force: bool = False) -> 'ClientResponse':
         """Remove domain instance on VeiL ECP."""
         url = self.action_url('remove/')
@@ -452,9 +614,10 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def list(self, with_vdisks: bool = True, paginator: VeilRestPaginator = None, # noqa
-                   fields: list = None,
-                   params: dict = None) -> 'ClientResponse':  # noqa
+    async def list(self, with_vdisks: bool = True,  # noqa: A003
+                   paginator: VeilRestPaginator = None,
+                   fields: List[str] = None,
+                   params: dict = None) -> 'ClientResponse':
         """Get list of data_pools with node_id filter.
 
         By default get only domains with vdisks.
@@ -480,7 +643,9 @@ class VeilDomain(VeilApiObject):
             extra_params.update(params)
         return await super().list(paginator=paginator, extra_params=extra_params)
 
-    async def __multi_manager(self, action: MultiManagerAction, entity_ids: list, full: bool,
+    async def __multi_manager(self, action: MultiManagerAction,
+                              entity_ids: List[str],
+                              full: bool,
                               force: bool) -> 'ClientResponse':
         """Multi manager with action.
 
@@ -498,37 +663,86 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def multi_start(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_start(self, entity_ids: List[str],
+                          full: bool = True,
+                          force: bool = False) -> 'ClientResponse':
         """Multi start domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.START, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.START,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_shutdown(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_shutdown(self, entity_ids: List[str],
+                             full: bool = True,
+                             force: bool = False) -> 'ClientResponse':
         """Multi shutdown domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.SHUTDOWN, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.SHUTDOWN,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_suspend(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_suspend(self, entity_ids: List[str],
+                            full: bool = True,
+                            force: bool = False) -> 'ClientResponse':
         """Multi suspend domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.SUSPEND, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.SUSPEND,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_reboot(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_reboot(self, entity_ids: List[str],
+                           full: bool = True,
+                           force: bool = False) -> 'ClientResponse':
         """Multi reboot domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.REBOOT, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.REBOOT,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_resume(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_resume(self, entity_ids: List[str],
+                           full: bool = True,
+                           force: bool = False) -> 'ClientResponse':  # noqa: E501
         """Multi resume domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.RESUME, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.RESUME,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_remove(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_remove(self, entity_ids: List[str],
+                           full: bool = True,
+                           force: bool = False) -> 'ClientResponse':
         """Multi remove domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.DELETE, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.DELETE,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
 
-    async def multi_migrate(self, entity_ids: list, full: bool = True, force: bool = False) -> 'ClientResponse':
+    async def multi_migrate(self, entity_ids: List[str],
+                            full: bool = True,
+                            force: bool = False) -> 'ClientResponse':
         """Multi migrate domain instance on VeiL ECP."""
-        return await self.__multi_manager(action=MultiManagerAction.MIGRATE, entity_ids=entity_ids, full=full,
+        return await self.__multi_manager(action=MultiManagerAction.MIGRATE,
+                                          entity_ids=entity_ids,
+                                          full=full,
                                           force=force)
+
+    async def backup(self, configuration: DomainBackupConfiguration):
+        """Create domain backup."""
+        url = ''.join([self.base_url, 'backup/'])
+        data = configuration.notnull_attrs
+        data['domain'] = self.api_object_id
+        return await self._post(url=url, json_data=data)
+
+    async def show_backup(self, file_id: str):
+        """A serialized VM representation from a VeiL ECP or OVA backup."""  # noqa: D401
+        url = ''.join([self.base_url, 'show-backup/'])
+        data = {'file': file_id}
+        return await self._post(url=url, json_data=data)
+
+    async def automated_restore(self, file_id: str, node_id: str, datapool_id: str = None):
+        """Automatically restore VM from backup."""
+        url = ''.join([self.base_url, 'automated-restore/'])
+        data = {'file': file_id, 'node': node_id}
+        if datapool_id:
+            data['datapool'] = datapool_id
+        return await self._post(url=url, json_data=data)

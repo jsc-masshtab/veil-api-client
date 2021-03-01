@@ -1,126 +1,129 @@
 # -*- coding: utf-8 -*-
 """Veil api cache drivers."""
-# TODO: replace with https://github.com/aio-libs/aiomcache
 import functools
-import json
 import logging
-from enum import Enum
+from abc import ABCMeta, abstractmethod
+from asyncio import iscoroutinefunction
+from typing import Optional
 
-try:
-    # TODO: заменить на Client из best practices
-    from pymemcache.client.base import Client as MemcachedClient
-except ImportError:  # pragma: no cover
-    MemcachedClient = None
-
-from .utils import IntType
+from .utils import IntType, VeilConfiguration, VeilRetryConfiguration
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
 
 
-class CacheType(Enum):
-    """Supported caching types.
+class VeilCacheAbstractClient(metaclass=ABCMeta):
+    """User cache client Abstract class."""
 
-    name is python client library
-    value is str representation
-    """
+    @abstractmethod
+    async def get_from_cache(self,
+                             veil_api_client_request_cor,
+                             veil_api_client,
+                             method_name,
+                             url: str,
+                             headers: dict,
+                             params: dict,
+                             ssl: bool,
+                             json_data: Optional[dict] = None,
+                             retry_opts: Optional[VeilRetryConfiguration] = None,
+                             ttl: int = 0,
+                             *args, **kwargs):
+        """Abstract method for VeiLClient."""
+        pass  # pragma: no cover
 
-    MemcachedClient = 'memcached'
 
-    def __str__(self):
-        """Representation of cache client library."""
-        return self.value
-
-    @property
-    def client(self):
-        """Enum name must be cache client class."""
-        return eval(self.name)
-
-
-class VeilCacheOptions:
+class VeilCacheConfiguration(VeilConfiguration):
     """VeilApiClient cache options.
 
     Arguments:
-        cache_type: supported cache storage type (now only memcached).
+        cache_client: user custom cache class that can write and
+            read request data from itself.
         ttl: cache value time to live (int).
-        server:
     """
 
     ttl = IntType
 
-    def __init__(self, cache_type: CacheType, server: tuple, ttl: int) -> None:
-        """Please see help(VeilCacheOptions) for more info."""
-        self.cache_type = CacheType(cache_type)
-        self.server = server
+    def __init__(self, cache_client: VeilCacheAbstractClient, ttl: int) -> None:
+        """Please see help(VeilCacheConfiguration) for more info."""
+        if cache_client and not isinstance(cache_client, VeilCacheAbstractClient):
+            raise TypeError('cache_client must be VeilCacheAbstractClient descendant.')
+        self.cache_client = cache_client
         self.ttl = ttl
 
-
-# memcached client
-class DictSerde:
-    """Veil api response serializer for memcached."""
-
-    @staticmethod
-    def serialize(key, value):  # noqa
-        """Serialize VeilApiResponse to bytes."""
-        if isinstance(value, str):
-            return value.encode('utf-8'), 1
-        elif isinstance(value, dict):
-            return json.dumps(value).encode('utf-8'), 2
-        raise Exception('Unknown serialization format')
-
-    @staticmethod
-    def deserialize(key, value, flags):  # noqa
-        """Deserialize bytes to dict."""
-        if flags == 1:
-            return value.decode('utf-8')
-        elif flags == 2:
-            return json.loads(value.decode('utf-8'))
-        raise Exception('Unknown serialization format')
+    async def get_from_cache(self,
+                             coroutine_function,
+                             client,
+                             method_name: str,
+                             url: str,
+                             headers: dict,
+                             params: dict,
+                             ssl: bool,
+                             json_data: Optional[dict] = None,
+                             retry_opts: Optional[VeilRetryConfiguration] = None,
+                             *args, **kwargs):
+        """Get response from a cache."""
+        if self.cache_client and self.ttl > 0:
+            return await self.cache_client.get_from_cache(coroutine_function,
+                                                          client,
+                                                          method_name,
+                                                          url,
+                                                          headers,
+                                                          params,
+                                                          ssl,
+                                                          json_data,
+                                                          retry_opts,
+                                                          ttl=self.ttl,
+                                                          *args, **kwargs)
+        # If cache_opts are defined as no cache - just wait for a coroutine result.
+        if iscoroutinefunction(coroutine_function):
+            return await coroutine_function(client,
+                                            method_name,
+                                            url,
+                                            headers,
+                                            params,
+                                            ssl,
+                                            json_data,
+                                            retry_opts,
+                                            *args, **kwargs)
+        raise NotImplementedError('coroutine_function should be a coroutine function.')
 
 
 def cached_response(func):
-    """Check url and parameters in cache."""
+    """Cache VeilApiResponse if cache_opts are properly determined."""
 
     @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        # TODO: функции set и get нужно вынести выше, чтобы можно было переопределить
-        # TODO: класс клиента принимающий в конструктор класс из библиотеки и содержащий методы set и get,
-        #  которые делают super() нужно класса
-        # TODO: время жизни в параметрах клиента
-        # TODO: use PooledClient
-        # TODO: best practices from https://pymemcache.readthedocs.io/en/latest/getting_started.html
+    async def wrapper(client,
+                      method_name: str,
+                      url: str,
+                      headers: dict,
+                      params: dict,
+                      ssl: bool,
+                      json_data: Optional[dict] = None,
+                      retry_opts: Optional[VeilRetryConfiguration] = None,
+                      cache_opts: Optional[VeilCacheConfiguration] = None,
+                      *args, **kwargs):
+        """cache_opts must be a VeilCacheConfiguration instance."""
+        if cache_opts and isinstance(cache_opts, VeilCacheConfiguration):
+            return await cache_opts.get_from_cache(func,
+                                                   client,
+                                                   method_name,
+                                                   url,
+                                                   headers,
+                                                   params,
+                                                   ssl,
+                                                   json_data,
+                                                   retry_opts,
+                                                   *args, **kwargs)
 
-        cache_opts = args[0]._cache_opts  # noqa
-        # cache options must be set
-        if not cache_opts:
-            return await func(*args, **kwargs)
-        # get client lib instance
-        client = cache_opts.cache_type.client(cache_opts.server, serde=DictSerde())
+        # If there is no proper cache configuration.
+        return await func(client,
+                          method_name=method_name,
+                          url=url,
+                          headers=headers,
+                          params=params,
+                          ssl=ssl,
+                          json_data=json_data,
+                          retry_opts=retry_opts,
+                          *args, **kwargs)
 
-        # arguments order is fixed
-        url = kwargs['url'] if kwargs.get('url') else args[1]
-        params = kwargs.get('extra_params')
-        if not params and len(args) > 2:
-            params = args[2]
-
-        cache_key = '{}|{}'.format(url, params) if params else url
-        # cache key can`t contain spaces
-        cache_key = cache_key.replace(' ', '')
-
-        result = client.get(cache_key)
-        if not result:
-            result = await func(*args, **kwargs)
-            # TODO: более явно перечислить статусы успеха на veil
-            if result['status_code'] in (200, 201, 202, 204):
-                logger.debug('save %s response to cache', url)
-                try:
-                    # save request response to cache
-                    client.set(cache_key, result, expire=cache_opts.ttl)
-                except Exception as ex_msg:
-                    # Key too long exc.
-                    logger.error('Failed to save response to cache.')
-                    logger.debug(ex_msg)
-        else:
-            logger.debug('get %s response from cache', url)
-        return result
     return wrapper

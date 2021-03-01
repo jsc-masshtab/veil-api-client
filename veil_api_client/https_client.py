@@ -5,7 +5,8 @@ import json
 import logging
 from types import TracebackType
 from typing import Dict, Optional, Type
-from uuid import uuid4
+from urllib.parse import urlencode
+from uuid import UUID, uuid4
 
 try:
     import ujson
@@ -13,66 +14,21 @@ except ImportError:  # pragma: no cover
     ujson = None
 
 try:
-    import pymemcache
-except ImportError:  # pragma: no cover
-    pymemcache = None
-
-try:
     import aiohttp
 except ImportError:  # pragma: no cover
     aiohttp = None
 
-from .api_objects.cluster import VeilCluster
-from .api_objects.controller import VeilController
-from .api_objects.data_pool import VeilDataPool
-from .api_objects.domain import VeilDomain
-from .api_objects.node import VeilNode
-from .api_objects.resource_pool import VeilResourcePool
-from .api_objects.vdisk import VeilVDisk
-from .base.api_cache import VeilCacheOptions, cached_response
-from .base.api_object import VeilTask
-from .base.utils import (IntType, NullableDictType, NullableSetType, VeilJwtTokenType, VeilUrlStringType,
-                         veil_api_response)
+from .api_objects import (VeilCluster, VeilController, VeilDataPool,
+                          VeilDomainExt, VeilLibrary, VeilNode, VeilResourcePool,
+                          VeilVDisk)
+from .base import VeilRetryConfiguration, VeilTag, VeilTask
+from .base.api_cache import VeilCacheConfiguration, cached_response
+from .base.utils import (IntType, NullableDictType, VeilJwtTokenType,
+                         VeilUrlStringType, veil_api_response)
 
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
-
-
-class VeilRetryOptions:
-    """Retry options class for veil api client.
-
-    Attributes:
-        num_of_attempts: num of retry attempts.
-        timeout: base try timeout time (with exponential grow).
-        max_timeout: max timeout between tries.
-        timeout_increase_step: timeout increase step.
-        status_codes: collection of response status codes witch must be repeated.
-        exceptions: collection of aiohttp exceptions witch must be repeated.
-    """
-
-    num_of_attempts = IntType('num_of_attempts')
-    timeout = IntType('timeout')
-    max_timeout = IntType('max_timeout')
-    timeout_increase_step = IntType('timeout_increase_step')
-    status_codes = NullableSetType('status_codes')
-    exceptions = NullableSetType('exceptions')
-
-    def __init__(self,
-                 num_of_attempts: int = 0,
-                 timeout: int = 1,
-                 max_timeout: int = 30,
-                 timeout_increase_step: int = 2,
-                 status_codes: set = None,
-                 exceptions: set = None
-                 ) -> None:
-        """Please see help(VeilRetryOptions) for more info."""
-        self.num_of_attempts = num_of_attempts
-        self.timeout = timeout
-        self.max_timeout = max_timeout
-        self.timeout_increase_step = timeout_increase_step
-        self.status_codes = status_codes
-        self.exceptions = exceptions
 
 
 class _RequestContext:
@@ -183,13 +139,14 @@ class VeilClient:
         extra_params: additional user params.
         cookies: additional user cookies (probably useless).
         ujson_: ujson using instead of default aiohttp.ClientSession serializer.
-        retry_opts: VeilRetryOptions instance.
-        cache_opts: VeilCacheOptions instance.
+        retry_opts: VeilRetryConfiguration instance.
+        cache_opts: VeilCacheConfiguration instance.
+        url_max_length: maximum url length (protocol + domain + query params)
     """
 
     __TRANSFER_PROTOCOL_PREFIX = 'https://'
     __AUTH_HEADER_KEY = 'Authorization'
-    __USER_AGENT_VAL = 'veil-api-client/2.1'
+    __USER_AGENT_VAL = 'veil-api-client/2.2'
     __IDEMPOTENCY_BODY_KEY = 'idempotency_key'
     __extra_headers = NullableDictType('__extra_headers')
     __extra_params = NullableDictType('__extra_params')
@@ -198,19 +155,24 @@ class VeilClient:
     server_address = VeilUrlStringType('server_address')
     token = VeilJwtTokenType('token')
 
-    def __init__(self, server_address: str, token: str, ssl_enabled: bool = True,
-                 session_reopen: bool = False, timeout: int = 5 * 60, extra_headers: dict = None,
-                 extra_params: dict = None, cookies: dict = None, ujson_: bool = True,
-                 retry_opts: VeilRetryOptions = None, cache_opts: VeilCacheOptions = None
+    def __init__(self, server_address: str,
+                 token: str,
+                 ssl_enabled: bool = True,
+                 session_reopen: bool = False,
+                 timeout: int = 5 * 60,
+                 extra_headers: Optional[dict] = None,
+                 extra_params: Optional[dict] = None,
+                 cookies: Optional[dict] = None,
+                 ujson_: bool = True,
+                 retry_opts: Optional[VeilRetryConfiguration] = None,
+                 cache_opts: Optional[VeilCacheConfiguration] = None,
+                 url_max_length: Optional[int] = None,
                  ) -> None:
         """Please see help(VeilClient) for more info."""
         if aiohttp is None:
             raise RuntimeError('Please install `aiohttp`')  # pragma: no cover
         if ujson is None and ujson_:
             raise RuntimeError('Please install `ujson`')  # pragma: no cover
-        if pymemcache is None and cache_opts:
-            # TODO: чтобы была возможность использовать другие кеши - нужно изменить условие на более обтекаемое
-            raise RuntimeError('For using cache please install `pymemcache`')  # pragma: no cover
 
         self.server_address = server_address
         self.token = token
@@ -223,14 +185,21 @@ class VeilClient:
 
         self.__timeout = __timeout
         self.__cookies = cookies
+
         # ujson is much faster but less compatible
         self.__json_serialize = ujson.dumps if ujson_ else json.dumps
 
+        if not retry_opts:
+            retry_opts = VeilRetryConfiguration()
         self.__retry_opts = retry_opts
-        self.__client_session = self.new_client_session
 
         # cache options that can be used in request caching decorator
-        self._cache_opts = cache_opts
+        if not cache_opts:
+            cache_opts = VeilCacheConfiguration(cache_client=None, ttl=0)
+        self.__cache_opts = cache_opts
+
+        self.__url_max_length = url_max_length
+        self.__client_session = self.new_client_session
 
     async def __aenter__(self) -> 'VeilClient':
         """Async context manager enter."""
@@ -250,6 +219,7 @@ class VeilClient:
     @property
     def new_client_session(self) -> 'aiohttp.ClientSession':
         """Return new ClientSession instance."""
+        # TODO: DeprecationWarning: The object should be created from async function
         return aiohttp.ClientSession(timeout=self.__timeout, cookies=self.__cookies,
                                      json_serialize=self.__json_serialize)
 
@@ -305,17 +275,38 @@ class VeilClient:
             self.__client_session = self.new_client_session
         return self.__client_session
 
-    def __request_context(self, request: aiohttp.ClientRequest, url: str, headers: dict, params: dict, ssl: bool,
-                          json_data: dict = None):
+    def __request_context(self,
+                          request: aiohttp.ClientRequest,
+                          url: str,
+                          headers: dict,
+                          params: dict,
+                          ssl: bool,
+                          retry_opts: VeilRetryConfiguration,
+                          json_data: Optional[dict] = None):
         """Create new _RequestContext instance."""
+        # protocol + domain + query args
+        if self.__url_max_length:
+            full_url = '{url}?{params}'.format(url=url, params=urlencode(params))
+            if len(full_url) > self.__url_max_length:
+                raise AssertionError('The maximum url length is set and exceeded.')
+        # User-friendly magic - convert all UUID values to a str
+        if isinstance(json_data, dict):
+            for key, value in json_data.items():
+                try:
+                    if isinstance(value, UUID):
+                        logger.warning('JSON can`t contain a UUID -> converting %s to a str',
+                                       value)
+                        json_data[key] = str(value)
+                except ValueError:
+                    json_data[key] = value
         return _RequestContext(request=request, url=url, headers=headers, params=params,
                                ssl=ssl, json=json_data,
-                               num_of_attempts=self.__retry_opts.num_of_attempts,
-                               timeout=self.__retry_opts.timeout,
-                               max_timeout=self.__retry_opts.max_timeout,
-                               timeout_increase_step=self.__retry_opts.timeout_increase_step,
-                               status_codes=self.__retry_opts.status_codes,
-                               exceptions=self.__retry_opts.exceptions)
+                               num_of_attempts=retry_opts.num_of_attempts,
+                               timeout=retry_opts.timeout,
+                               max_timeout=retry_opts.max_timeout,
+                               timeout_increase_step=retry_opts.timeout_increase_step,
+                               status_codes=retry_opts.status_codes,
+                               exceptions=retry_opts.exceptions)
 
     @staticmethod
     async def __fetch_response_data(response: aiohttp.ClientResponse) -> Dict[str, str]:
@@ -329,152 +320,241 @@ class VeilClient:
                 try:
                     data = await response.json()
                 except aiohttp.ContentTypeError:
-                    logger.debug('VeiL response has wrong content type. Status code changed to 418.')
+                    logger.debug('VeiL response has wrong content type.')
                     data = dict()
-                    status_code = 418
             return dict(status_code=status_code, headers=dict(headers), data=data)
 
-    async def __api_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
-                            json_data: dict = None) -> Dict[str, str]:
-        """Log parameters and execute passed aiohttp method without retry."""
-        # TODO: deprecate in 2.2.1
-        # VeiL can`t decode requests witch contain extra commas
-        for argument, value in params.items():  # noqa
-            if isinstance(value, str) and value[-1] == ',':
-                params[argument] = value[:-1]
-        # log request
-        logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
-                     params, json)
-        # determine aiohttp.client method to call
-        aiohttp_request_method = getattr(self.__session, method_name)
-        # call aiohttp.client method
-        aiohttp_response = await aiohttp_request_method(url=url, headers=headers, params=params, ssl=ssl,
-                                                        json=json_data)
-        # fetch response data
-        response_data = await self.__fetch_response_data(aiohttp_response)
-        return response_data
-
-    async def __api_retry_request(self, method_name: str, url: str, headers: dict, params: dict, ssl: bool,
-                                  json_data: dict = None) -> Dict[str, str]:
+    async def __api_retry_request(self, method_name: str,
+                                  url: str,
+                                  headers: dict,
+                                  params: dict,
+                                  ssl: bool,
+                                  json_data: Optional[dict] = None,
+                                  retry_opts: Optional[VeilRetryConfiguration] = None) -> Dict[str, str]:  # noqa: E501
         """Log parameters and execute passed aiohttp method with retry options."""
         # VeiL can`t decode requests witch contain extra commas
-        for argument, value in params.items():  # noqa
+        for argument, value in params.items():
             if isinstance(value, str) and value[-1] == ',':
                 params[argument] = value[:-1]
+        # If request retry_opts are not defined - use Class attr value.
+        if not retry_opts:
+            retry_opts = self.__retry_opts
         # log request
-        logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled, url, self.__headers,
-                     params, json_data)
+        logger.debug('ssl: %s, url: %s, header: %s, params: %s, json: %s', self.__ssl_enabled,
+                     url, self.__headers, params, json_data)
         # determine aiohttp.client method to call
         aiohttp_request_method = getattr(self.__session, method_name)
         # create aiohttp.request witch can be retried.
-        aiohttp_request = self.__request_context(request=aiohttp_request_method, url=url, headers=headers,
+        aiohttp_request = self.__request_context(request=aiohttp_request_method,
+                                                 url=url,
+                                                 headers=headers,
                                                  params=params,
-                                                 ssl=ssl, json_data=json_data)
+                                                 ssl=ssl,
+                                                 json_data=json_data,
+                                                 retry_opts=retry_opts)
         # execute request and fetch response data
         async with aiohttp_request as aiohttp_response:
             return await self.__fetch_response_data(aiohttp_response)
 
     @veil_api_response
     @cached_response
+    async def api_request(self,
+                          method_name: str,
+                          url: str,
+                          headers: dict,
+                          params: dict,
+                          ssl: bool,
+                          json_data: Optional[dict] = None,
+                          retry_opts: Optional[VeilRetryConfiguration] = None
+                          ):
+        """Api_retry interface.
+
+        Note:
+            Override me to extend standard behaviour.
+        """
+        return await self.__api_retry_request(method_name=method_name,
+                                              url=url,
+                                              headers=headers,
+                                              params=params,
+                                              ssl=ssl,
+                                              json_data=json_data,
+                                              retry_opts=retry_opts)
+
     async def get(self, api_object, url: str,
-                  extra_params: dict = None) -> Dict[str, str]:
+                  extra_params: Optional[dict] = None,
+                  retry_opts: Optional[VeilRetryConfiguration] = None,
+                  cache_opts: Optional[VeilCacheConfiguration] = None) -> Dict[str, str]:
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
             params.update(extra_params)
+        if not cache_opts:
+            cache_opts = self.__cache_opts
         logger.debug('%s GET request.', api_object.__class__.__name__)
-        # Check what type of request we should use
-        if self.__retry_opts:
-            return await self.__api_retry_request('get', url,
-                                                  headers=self.__headers,
-                                                  params=params,
-                                                  ssl=self.__ssl_enabled)
-        return await self.__api_request('get', url,
-                                        headers=self.__headers,
-                                        params=params,
-                                        ssl=self.__ssl_enabled)
+        return await self.api_request(api_object=api_object,
+                                      method_name='get',
+                                      url=url,
+                                      headers=self.__headers,
+                                      params=params,
+                                      ssl=self.__ssl_enabled,
+                                      retry_opts=retry_opts,
+                                      cache_opts=cache_opts)
 
-    @veil_api_response
-    async def post(self, api_object, url: str, json_data: dict = None, extra_params: dict = None) -> Dict[str, str]:
+    async def post(self, api_object,
+                   url: str,
+                   json_data: Optional[dict] = None,
+                   extra_params: Optional[dict] = None,
+                   retry_opts: Optional[VeilRetryConfiguration] = None,
+                   cache_opts: Optional[VeilCacheConfiguration] = None) -> Dict[str, str]:
         """Send POST request to VeiL ECP."""
         if isinstance(json_data, dict):
             json_data[self.__IDEMPOTENCY_BODY_KEY] = '{}'.format(uuid4())
         params = self.__params
         if extra_params:
             params.update(extra_params)
+        if not cache_opts:
+            cache_opts = self.__cache_opts
         logger.debug('%s POST request.', api_object.__class__.__name__)
-        # I believe that this is BAD idea, but no another options.
-        if self.__retry_opts:
-            return await self.__api_retry_request('post', url,
-                                                  headers=self.__headers,
-                                                  params=params,
-                                                  ssl=self.__ssl_enabled,
-                                                  json_data=json_data)
-        return await self.__api_request('post', url,
-                                        headers=self.__headers,
-                                        params=params,
-                                        ssl=self.__ssl_enabled,
-                                        json_data=json_data)
+        return await self.api_request(api_object=api_object,
+                                      method_name='post', url=url,
+                                      headers=self.__headers,
+                                      params=params,
+                                      ssl=self.__ssl_enabled,
+                                      json_data=json_data,
+                                      retry_opts=retry_opts,
+                                      cache_opts=cache_opts)
 
-    @veil_api_response
-    async def put(self, api_object, url: str, json_data: dict = None, extra_params: dict = None) -> Dict[str, str]:
+    async def put(self, api_object,
+                  url: str,
+                  json_data: Optional[dict] = None,
+                  extra_params: Optional[dict] = None,
+                  retry_opts: Optional[VeilRetryConfiguration] = None,
+                  cache_opts: Optional[VeilCacheConfiguration] = None) -> Dict[str, str]:
         """Send PUT request to VeiL ECP."""
         params = self.__params
         if extra_params:
             params.update(extra_params)
+        if not cache_opts:
+            cache_opts = self.__cache_opts
         logger.debug('%s PUT request.', api_object.__class__.__name__)
-        # I believe that this is BAD idea, but no another options.
-        if self.__retry_opts:
-            return await self.__api_retry_request('put', url,
-                                                  headers=self.__headers,
-                                                  params=params,
-                                                  ssl=self.__ssl_enabled,
-                                                  json_data=json_data)
-        return await self.__api_request('put', url,
-                                        headers=self.__headers,
-                                        params=params,
-                                        ssl=self.__ssl_enabled,
-                                        json_data=json_data)
+        return await self.api_request(api_object=api_object,
+                                      method_name='put',
+                                      url=url,
+                                      headers=self.__headers,
+                                      params=params,
+                                      ssl=self.__ssl_enabled,
+                                      json_data=json_data,
+                                      retry_opts=retry_opts,
+                                      cache_opts=cache_opts)
 
-    def domain(self, domain_id: str = None, resource_pool: str = None,
-               cluster_id: str = None, node_id: str = None, data_pool_id: str = None,
-               template: bool = None) -> 'VeilDomain':
-        """Return VeilDomain entity."""
-        return VeilDomain(client=self, template=template, api_object_id=domain_id, resource_pool=resource_pool,
-                          cluster_id=cluster_id,
-                          node_id=node_id,
-                          data_pool_id=data_pool_id)
+    def domain(self,
+               domain_id: Optional[str] = None,
+               resource_pool: Optional[str] = None,
+               cluster_id: Optional[str] = None,
+               node_id: Optional[str] = None,
+               data_pool_id: Optional[str] = None,
+               template: Optional[bool] = None,
+               retry_opts: Optional[VeilRetryConfiguration] = None,
+               cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilDomainExt':
+        """Return VeilDomainV entity."""
+        return VeilDomainExt(client=self,
+                             template=template,
+                             api_object_id=domain_id,
+                             resource_pool=resource_pool,
+                             cluster_id=cluster_id,
+                             node_id=node_id,
+                             data_pool_id=data_pool_id,
+                             retry_opts=retry_opts,
+                             cache_opts=cache_opts)
 
-    def controller(self, controller_id: str = None) -> 'VeilController':
+    def controller(self, controller_id: Optional[str] = None,
+                   retry_opts: Optional[VeilRetryConfiguration] = None,
+                   cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilController':
         """Return VeilController entity."""
-        return VeilController(client=self, api_object_id=controller_id)
+        return VeilController(client=self, api_object_id=controller_id,
+                              retry_opts=retry_opts,
+                              cache_opts=cache_opts)
 
-    def resource_pool(self, resource_pool_id: str = None, node_id: str = None,
-                      cluster_id: str = None) -> 'VeilResourcePool':
+    def resource_pool(self, resource_pool_id: Optional[str] = None,
+                      node_id: Optional[str] = None,
+                      cluster_id: Optional[str] = None,
+                      retry_opts: Optional[VeilRetryConfiguration] = None,
+                      cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilResourcePool':  # noqa: E501
         """Return VeilResourcePool entity."""
-        return VeilResourcePool(client=self, api_object_id=resource_pool_id, node_id=node_id, cluster_id=cluster_id)
+        return VeilResourcePool(client=self,
+                                api_object_id=resource_pool_id,
+                                node_id=node_id,
+                                cluster_id=cluster_id,
+                                retry_opts=retry_opts,
+                                cache_opts=cache_opts)
 
-    def cluster(self, cluster_id: str = None) -> 'VeilCluster':
+    def cluster(self, cluster_id: Optional[str] = None,
+                retry_opts: Optional[VeilRetryConfiguration] = None,
+                cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilCluster':
         """Return VeilCluster entity."""
-        return VeilCluster(client=self, api_object_id=cluster_id)
+        return VeilCluster(client=self, api_object_id=cluster_id,
+                           retry_opts=retry_opts,
+                           cache_opts=cache_opts)
 
-    def data_pool(self, data_pool_id: str = None, node_id: str = None, cluster_id: str = None,
-                  resource_pool_id: str = None) -> 'VeilDataPool':
+    def data_pool(self, data_pool_id: Optional[str] = None,
+                  node_id: Optional[str] = None,
+                  cluster_id: Optional[str] = None,
+                  resource_pool_id: Optional[str] = None,
+                  retry_opts: Optional[VeilRetryConfiguration] = None,
+                  cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilDataPool':
         """Return VeilDataPool entity."""
-        return VeilDataPool(client=self, api_object_id=data_pool_id, node_id=node_id, cluster_id=cluster_id,
-                            resource_pool_id=resource_pool_id)
+        return VeilDataPool(client=self,
+                            api_object_id=data_pool_id,
+                            node_id=node_id,
+                            cluster_id=cluster_id,
+                            resource_pool_id=resource_pool_id,
+                            retry_opts=retry_opts,
+                            cache_opts=cache_opts)
 
-    def node(self, node_id: str = None, cluster_id: str = None, resource_pool_id: str = None) -> 'VeilNode':
+    def node(self, node_id: Optional[str] = None,
+             cluster_id: Optional[str] = None,
+             resource_pool_id: Optional[str] = None,
+             retry_opts: Optional[VeilRetryConfiguration] = None,
+             cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilNode':
         """Return VeilNode entity."""
-        return VeilNode(client=self, api_object_id=node_id, cluster_id=cluster_id, resource_pool_id=resource_pool_id)
+        return VeilNode(client=self,
+                        api_object_id=node_id,
+                        cluster_id=cluster_id,
+                        resource_pool_id=resource_pool_id,
+                        retry_opts=retry_opts,
+                        cache_opts=cache_opts)
 
-    def vdisk(self, vdisk_id: str = None) -> 'VeilVDisk':
+    def vdisk(self, vdisk_id: Optional[str] = None,
+              retry_opts: Optional[VeilRetryConfiguration] = None,
+              cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilVDisk':
         """Return VeilVDisk entity."""
-        return VeilVDisk(client=self, api_object_id=vdisk_id)
+        return VeilVDisk(client=self, api_object_id=vdisk_id,
+                         retry_opts=retry_opts,
+                         cache_opts=cache_opts)
 
-    def task(self, task_id: str = None) -> 'VeilTask':
+    def task(self, task_id: Optional[str] = None,
+             retry_opts: Optional[VeilRetryConfiguration] = None,
+             cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilTask':
         """Return VeilTask entity."""
-        return VeilTask(client=self, api_object_id=task_id)
+        return VeilTask(client=self, api_object_id=task_id,
+                        retry_opts=retry_opts,
+                        cache_opts=cache_opts)
+
+    def tag(self, tag_id: Optional[str] = None,
+            retry_opts: Optional[VeilRetryConfiguration] = None,
+            cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilTag':
+        """Return VeilTag entity."""
+        return VeilTag(client=self, api_object_id=tag_id,
+                       retry_opts=retry_opts,
+                       cache_opts=cache_opts)
+
+    def library(self, library_id: Optional[str] = None,
+                retry_opts: Optional[VeilRetryConfiguration] = None,
+                cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilLibrary':
+        """Return VeilLibrary entity."""
+        return VeilLibrary(client=self, api_object_id=library_id,
+                           retry_opts=retry_opts,
+                           cache_opts=cache_opts)
 
 
 class VeilClientSingleton:
@@ -487,16 +567,21 @@ class VeilClientSingleton:
     __client_instances = dict()
     __TIMEOUT = IntType('__TIMEOUT')
 
-    def __init__(self, timeout: int = 5 * 60, cache_opts: VeilCacheOptions = None,
-                 retry_opts: VeilRetryOptions = None) -> None:
+    def __init__(self, timeout: int = 5 * 60,
+                 cache_opts: Optional[VeilCacheConfiguration] = None,
+                 retry_opts: Optional[VeilRetryConfiguration] = None,
+                 url_max_length: Optional[int] = None) -> None:
         """Please see help(VeilClientSingleton) for more info."""
         self.__TIMEOUT = timeout
         self.__CACHE_OPTS = cache_opts
         self.__RETRY_OPTS = retry_opts
+        self.__URL_MAX_LENGTH = url_max_length
 
     def add_client(self, server_address: str, token: str,
-                   timeout: int = None, cache_opts: VeilCacheOptions = None,
-                   retry_opts: VeilRetryOptions = None) -> 'VeilClient':
+                   timeout: Optional[int] = None,
+                   cache_opts: Optional[VeilCacheConfiguration] = None,
+                   retry_opts: Optional[VeilRetryConfiguration] = None,
+                   url_max_length: Optional[int] = None) -> 'VeilClient':
         """Create new instance of VeilClient if it is not initialized on same address.
 
         Attributes:
@@ -504,13 +589,23 @@ class VeilClientSingleton:
             token: VeiL auth token.
             timeout: aiohttp.ClientSession total timeout.
         """
-        _timeout = timeout if timeout else self.__TIMEOUT
-        _cache_opts = cache_opts if cache_opts else self.__CACHE_OPTS
-        _retry_opts = retry_opts if retry_opts else self.__RETRY_OPTS
+        if not timeout:
+            timeout = self.__TIMEOUT
+        if not cache_opts:
+            cache_opts = self.__CACHE_OPTS
+        if not retry_opts:
+            retry_opts = self.__RETRY_OPTS
+        if not url_max_length:
+            url_max_length = self.__URL_MAX_LENGTH
+        # create a new client if not exist before.
         if server_address not in self.__client_instances:
             instance = VeilClient(server_address=server_address, token=token,
-                                  session_reopen=True, timeout=_timeout, ujson_=True, cache_opts=_cache_opts,
-                                  retry_opts=_retry_opts)
+                                  session_reopen=True,
+                                  timeout=timeout,
+                                  ujson_=True,
+                                  cache_opts=cache_opts,
+                                  retry_opts=retry_opts,
+                                  url_max_length=url_max_length)
             self.__client_instances[server_address] = instance
         return self.__client_instances[server_address]
 
