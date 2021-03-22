@@ -7,13 +7,13 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='veil-api-client',
-    version='2.2.0',
+    version='2.2.2',
     author='Aleksey Devyatkin',
     author_email='a.devyatkin@mashtab.org',
     description='VeiL ECP Api client',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='http://gitlab.bazalt.team/vdi/veil-api-client',
+    url='https://github.com/jsc-masshtab/veil-api-client',
     packages=setuptools.find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',

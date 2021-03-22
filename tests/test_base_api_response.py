@@ -43,7 +43,7 @@ class TestVeilApiResponse:
         assert good_response.errors is None
 
         response = VeilApiResponse(status_code=202,
-                                   data={'k': 'value', '_task': str(uuid4())},
+                                   data={'k': 'value', '_task': {'id': str(uuid4())}},
                                    headers=None,
                                    api_object=VeilVDisk(client=None,
                                                         api_object_id=str(uuid4())))
@@ -85,7 +85,7 @@ class TestVeilApiResponse:
         assert isinstance(good_response.response[0], VeilVDisk)
 
         response = VeilApiResponse(status_code=202,
-                                   data={'_task': str(uuid4())},
+                                   data={'_task': {'id': str(uuid4())}},
                                    headers=None,
                                    api_object=VeilVDisk(client=None, api_object_id=None)
                                    )

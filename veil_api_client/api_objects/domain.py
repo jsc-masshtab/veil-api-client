@@ -309,6 +309,7 @@ class VeilDomain(VeilApiObject):
         self.user_power_state = 0
         self.guest_utils = None
         self.cpu_topology = None
+        self.cpu_count = None
         self.tags = None
         self.owners = None
         self.sound = None
@@ -325,10 +326,11 @@ class VeilDomain(VeilApiObject):
         self.data_pool_id = str(data_pool_id) if data_pool_id else None
 
     @property
-    def cpu_count(self):
-        """Get cpu_count from cpu_topology dict."""
-        if isinstance(self.cpu_topology, dict):
-            return self.cpu_topology.get('cpu_count')
+    def cpu_count_prop(self):
+        """Get cpu_count from cpu_topology dict or self.cpu_count."""
+        if isinstance(self.cpu_topology, dict) and self.cpu_topology.get('cpu_count'):
+            return self.cpu_topology['cpu_count']
+        return self.cpu_count
 
     @property
     def parent_name(self):
@@ -386,7 +388,7 @@ class VeilDomain(VeilApiObject):
     async def in_ad(self):
         """Windows domain (VM) already in AD."""
         print(
-            '\nWARNING: in_ad scheduled for removal in 2.2.1 '
+            '\nWARNING: in_ad scheduled for removal in 2.2.2 '
             'use is_in_ad method.\n',
             file=sys.stderr,
         )

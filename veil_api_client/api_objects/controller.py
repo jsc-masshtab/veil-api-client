@@ -45,7 +45,7 @@ class VeilController(VeilApiObject):
     async def ok(self) -> bool:
         """Availability check successful."""
         print(
-            '\nWARNING: ok scheduled for removal in 2.2.1 '
+            '\nWARNING: ok scheduled for removal in 2.2.2 '
             'use is_ok method.\n',
             file=sys.stderr,
         )
@@ -60,7 +60,7 @@ class VeilController(VeilApiObject):
     async def system_time(self) -> dict:
         """Get the current controller time."""
         print(
-            '\nWARNING: system_time scheduled for removal in 2.2.1 '
+            '\nWARNING: system_time scheduled for removal in 2.2.2 '
             'use get_system_time method.\n',
             file=sys.stderr,
         )

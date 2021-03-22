@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Base api object."""
 import sys
+from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
@@ -43,7 +44,7 @@ class VeilRestPaginator(VeilConfiguration):
         self.offset = offset
 
 
-class VeilApiObjectStatus:
+class VeilApiObjectStatus(str, Enum):
     """Veil api object possible statuses."""
 
     creating = 'CREATING'
@@ -80,6 +81,7 @@ class VeilApiObject:
         self.__api_entity_class = api_entity_class
         self._client = client
         self.api_object_id = api_object_id
+        self.id = api_object_id
         self.retry_opts = retry_opts
         self.cache_opts = cache_opts
         self.status = None
@@ -97,6 +99,15 @@ class VeilApiObject:
 
     def update_public_attrs(self, attrs_dict: dict) -> None:
         """Update public class attributes ignoring property."""
+        public_attrs = dict()
+        for attr in attrs_dict:
+            if attr not in self.public_attrs:
+                continue
+            public_attrs[attr] = attrs_dict[attr]
+        self.update_or_set_public_attrs(public_attrs)
+
+    def update_or_set_public_attrs(self, attrs_dict: dict) -> None:
+        """Update or set class public attributes ignoring property."""
         for attr in attrs_dict:
             if attr.startswith('_'):
                 continue
@@ -105,8 +116,6 @@ class VeilApiObject:
             if attr == 'id':
                 # id not in public attrs, but we need to set api_object_id if it`s not set earlier.  # noqa: E501
                 self.__setattr__('api_object_id', attrs_dict[attr])
-                continue
-            if attr not in self.public_attrs:
                 continue
             if attr in self.public_attrs and isinstance(self.public_attrs[attr], property):
                 continue
@@ -278,7 +287,7 @@ class VeilApiObject:
         """Get api object instance and update public attrs."""
         response = await self._get(self.api_object_url)
         if response.status_code == 200 and response.data:
-            self.update_public_attrs(response.data)
+            self.update_or_set_public_attrs(response.data)
         return response
 
     async def tags_list(self, paginator: VeilRestPaginator = None):
@@ -368,7 +377,7 @@ class VeilTask(VeilApiObject):
     async def success(self) -> bool:
         """Check that task is completed."""
         print(
-            '\nWARNING: success scheduled for removal in 2.2.1 '
+            '\nWARNING: success scheduled for removal in 2.2.2 '
             'use is_success method.\n',
             file=sys.stderr,
         )
@@ -383,7 +392,7 @@ class VeilTask(VeilApiObject):
     async def failed(self) -> bool:
         """Check that task is failed."""
         print(
-            '\nWARNING: failed scheduled for removal in 2.2.1 '
+            '\nWARNING: failed scheduled for removal in 2.2.2 '
             'use is_failed method.\n',
             file=sys.stderr,
         )
@@ -398,7 +407,7 @@ class VeilTask(VeilApiObject):
     async def finished(self) -> bool:
         """Check that task is finished."""
         print(
-            '\nWARNING: finished scheduled for removal in 2.2.1 '
+            '\nWARNING: finished scheduled for removal in 2.2.2 '
             'use is_finished method.\n',
             file=sys.stderr,
         )
@@ -420,13 +429,16 @@ class VeilTask(VeilApiObject):
     @argument_type_checker_decorator  # noqa: A003
     async def list(self, paginator: VeilRestPaginator = None,
                    extra_params: dict = None,
-                   parent: str = None):
+                   parent: str = None,
+                   status: VeilApiObjectStatus = None):
         """List all tasks/subtasks of Veil api object class."""
         params = dict()
         if extra_params:
             params.update(extra_params)
         if parent:
             params['parent'] = parent
+        if status:
+            params['status'] = status.value
         return await super().list(paginator=paginator, extra_params=params)
 
 

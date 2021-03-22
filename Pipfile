@@ -14,10 +14,7 @@ coverage = "*"
 pytest = "*"
 pytest-flake8 = "*"
 pytest-cov = "*"
-setuptools = "*"
-wheel = "*"
 pytest-asyncio = "*"
-async_generator = "*"
 pytest-aiohttp = "*"
 
 [packages]

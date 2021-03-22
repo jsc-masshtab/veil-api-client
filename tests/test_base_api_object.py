@@ -6,7 +6,6 @@ import pytest
 
 from veil_api_client.base.api_object import VeilApiObject, VeilRestPaginator
 
-
 pytestmark = [pytest.mark.base]
 
 
@@ -164,3 +163,33 @@ class TestVeilApiObject:
         api_object.status = 'PARTIAL'
         assert api_object.partial
         assert not api_object.creating
+
+    def test_update_public_attr(self, api_object):
+        """Test case for update_public_attr method."""
+        attrs_dict = dict(status='SERVICE', not_in_public='secret')
+        api_object.update_public_attrs(attrs_dict)
+        assert api_object.status == 'SERVICE'
+        try:
+            api_object.not_in_public
+        except AttributeError:
+            assert True
+        else:
+            raise AssertionError
+
+    def test_update_or_set_public_attr(self, api_object):
+        """Test case for update_or_set_public_attr method."""
+        attrs_dict = dict(status='SERVICE', not_in_init='secret', _private='secret')
+        api_object.update_or_set_public_attrs(attrs_dict)
+        assert api_object.status == 'SERVICE'
+        try:
+            assert api_object.not_in_init == 'secret'
+        except AttributeError:
+            raise AssertionError
+        else:
+            assert True
+        try:
+            api_object._private
+        except AttributeError:
+            assert True
+        else:
+            raise AssertionError
