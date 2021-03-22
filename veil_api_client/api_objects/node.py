@@ -46,6 +46,8 @@ class VeilNode(VeilApiObject):
         self.cluster_name = None
         self.version = None
         self.ballooning = None
+        self.datacenter_name = None
+        self.cpu_count = None
         # cluster_id can be UUID.
         self.cluster_id = str(cluster_id) if cluster_id else None
         self.resource_pool_id = str(resource_pool_id) if resource_pool_id else None

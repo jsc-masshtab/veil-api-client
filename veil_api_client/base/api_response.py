@@ -78,11 +78,11 @@ class VeilApiResponse:
             if self.paginator_results:
                 for result in self.paginator_results:
                     inst = self.__api_object.copy()
-                    inst.update_public_attrs(result)
+                    inst.update_or_set_public_attrs(result)
                     api_object_list.append(inst)
             elif isinstance(self.value, dict) and self.value.get('count', None) != 0:
                 inst = self.__api_object.copy()
-                inst.update_public_attrs(self.value)
+                inst.update_or_set_public_attrs(self.value)
                 api_object_list.append(inst)
         return api_object_list
 
@@ -92,7 +92,7 @@ class VeilApiResponse:
         if self.status_code != 202 or not isinstance(self.data, dict) or not self.data.get('_task'):  # noqa: E501
             return
         task_inst = self.__api_object.task
-        task_inst.update_public_attrs(self.data['_task'])
+        task_inst.update_or_set_public_attrs(self.data['_task'])
         return task_inst
 
     @property

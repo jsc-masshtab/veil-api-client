@@ -2,10 +2,13 @@ stages:
   - linter
   - tests
   - build
+  - publish
 
 linter:
   image: python:3.5.9-alpine
   stage: linter
+  tags:
+    - docker
   before_script:
     - python -m pip install --upgrade pip && python -m pip install flake8 flake8-builtins flake8-bugbear flake8-import-order flake8-docstrings flake8-quotes
   script:
@@ -13,9 +16,27 @@ linter:
   only:
     - merge_requests
 
+security_check:
+  image: python:3.5.9-alpine
+  stage: linter
+  tags:
+    - docker
+  before_script:
+    - apk add build-base
+    - python -m pip install --upgrade pip
+    - python -m pip install pipenv safety
+    - pipenv install
+    - pipenv lock --requirements > requirements.txt
+  script:
+    - safety check -r requirements.txt
+  only:
+    - merge_requests
+
 tests:
   image: python:3.5.9-alpine
   stage: tests
+  tags:
+    - docker
   before_script:
     - apk add build-base
     - python -m pip install --upgrade pip
@@ -31,6 +52,8 @@ tests:
 build:
   image: python:3.5.9-alpine
   stage: build
+  tags:
+    - docker
   before_script:
     - apk add build-base
     - python -m pip install --upgrade pip
@@ -42,3 +65,21 @@ build:
     - python setup.py sdist bdist_wheel
   only:
     - merge_requests
+
+publish:
+  image: python:3.5.9-alpine
+  stage: publish
+  tags:
+    - docker
+  before_script:
+    - apk add build-base
+    - python -m pip install --upgrade pip
+    - python -m pip install pipenv twine setuptools wheel
+    - pipenv install --dev
+    - pipenv lock --dev --requirements > dev_requirements.txt
+    - python -m pip install -r dev_requirements.txt
+  script:
+    - python setup.py sdist bdist_wheel
+    - python -m twine upload dist/*
+  only:
+    - /^release-.*$/i

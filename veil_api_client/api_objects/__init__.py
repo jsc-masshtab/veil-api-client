@@ -9,7 +9,7 @@ from .library import VeilLibrary
 from .node import VeilNode
 from .resource_pool import VeilResourcePool
 from .vdisk import VeilVDisk
-from ..base import TagConfiguration, VeilRestPaginator
+from ..base import VeilRestPaginator
 
 
 class VeilDomainExt(VeilDomain):
@@ -26,7 +26,7 @@ class VeilDomainExt(VeilDomain):
 
 __all__ = (
     'DomainConfiguration', 'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilDomainExt',
-    'TagConfiguration', 'DomainBackupConfiguration', 'VeilLibrary', 'VeilNode',
-    'VeilController', 'VeilDataPool', 'VeilResourcePool', 'VeilVDisk', 'VeilCluster',
+    'DomainBackupConfiguration', 'VeilLibrary', 'VeilNode', 'VeilController',
+    'VeilDataPool', 'VeilResourcePool', 'VeilVDisk', 'VeilCluster',
     'DomainUpdateConfiguration'
 )
