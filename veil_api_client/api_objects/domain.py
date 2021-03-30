@@ -388,7 +388,7 @@ class VeilDomain(VeilApiObject):
     async def in_ad(self):
         """Windows domain (VM) already in AD."""
         print(
-            '\nWARNING: in_ad scheduled for removal in 2.2.2 '
+            '\nWARNING: in_ad scheduled for removal in 2.3.0 '
             'use is_in_ad method.\n',
             file=sys.stderr,
         )
