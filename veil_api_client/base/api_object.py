@@ -377,7 +377,7 @@ class VeilTask(VeilApiObject):
     async def success(self) -> bool:
         """Check that task is completed."""
         print(
-            '\nWARNING: success scheduled for removal in 2.2.2 '
+            '\nWARNING: success scheduled for removal in 2.3.0 '
             'use is_success method.\n',
             file=sys.stderr,
         )
@@ -392,7 +392,7 @@ class VeilTask(VeilApiObject):
     async def failed(self) -> bool:
         """Check that task is failed."""
         print(
-            '\nWARNING: failed scheduled for removal in 2.2.2 '
+            '\nWARNING: failed scheduled for removal in 2.3.0 '
             'use is_failed method.\n',
             file=sys.stderr,
         )
@@ -407,7 +407,7 @@ class VeilTask(VeilApiObject):
     async def finished(self) -> bool:
         """Check that task is finished."""
         print(
-            '\nWARNING: finished scheduled for removal in 2.2.2 '
+            '\nWARNING: finished scheduled for removal in 2.3.0 '
             'use is_finished method.\n',
             file=sys.stderr,
         )

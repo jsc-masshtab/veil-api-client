@@ -1,7 +1,7 @@
 [![Python 3.5](https://img.shields.io/badge/python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
-[![Coverage](https://img.shields.io/static/v1?label=coverage&message=70.4%&color=green)](https://coverage.readthedocs.io/en/coverage-5.1/)
+[![Coverage](https://img.shields.io/static/v1?label=coverage&message=70%&color=yellow)](https://coverage.readthedocs.io/en/coverage-5.1/)
 
 # VeiL api client 
 Предназначен для упрощения интеграции между конечным приложением/скриптом и ECP VeiL. Если вы не хотите слишком глубоко 
@@ -355,6 +355,7 @@ loop.run_until_complete(extra_main())
 * Виртуальный диск - VeilClient.vdisk()
 * Тэг - VeilClient.tag()
 * Библиотека - VeilClient.library()
+* Журнал - VeilClient.event()
 
 Если при инициализации сущности не был передан id сущности, то есть возможность работы только с обобщенными методами
 вроде list(). Если вы хотите иметь доступ к методам конкретной сущности — необходимо указать ее id.

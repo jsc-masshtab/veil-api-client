@@ -5,7 +5,7 @@
 for additional info see README.md
 """
 
-__version__ = '2.2.2'
+__version__ = '2.2.3'
 
 from .api_objects import (DomainBackupConfiguration, DomainConfiguration, DomainTcpUsb,
                           DomainUpdateConfiguration, VeilDomainExt, VeilGuestAgentCmd)
@@ -22,4 +22,4 @@ __all__ = (
     'DomainUpdateConfiguration', 'VeilApiObjectStatus'
 )
 
-__author__ = 'Aleksei Deviatkin <a.devyatkin@mashtab.org>'
+__author__ = 'Aleksei Deviatkin <a.devyatkin@mashtab.org>, Emile Gareev <e.gareev@mashtab.org>'
