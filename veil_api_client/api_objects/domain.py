@@ -748,3 +748,8 @@ class VeilDomain(VeilApiObject):
         if datapool_id:
             data['datapool'] = datapool_id
         return await self._post(url=url, json_data=data)
+
+    async def attach_veil_utils_iso(self) -> 'ClientResponse':
+        """Mount veil utils image to domain."""
+        url = self.api_object_url + 'attach-veil-utils-iso/'
+        return await self._post(url=url)

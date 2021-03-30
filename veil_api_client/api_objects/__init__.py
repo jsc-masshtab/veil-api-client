@@ -5,6 +5,7 @@ from .controller import VeilController
 from .data_pool import VeilDataPool
 from .domain import (DomainBackupConfiguration, DomainConfiguration, DomainTcpUsb,
                      DomainUpdateConfiguration, VeilDomain, VeilGuestAgentCmd)
+from .event import VeilEvent
 from .library import VeilLibrary
 from .node import VeilNode
 from .resource_pool import VeilResourcePool
@@ -26,7 +27,7 @@ class VeilDomainExt(VeilDomain):
 
 __all__ = (
     'DomainConfiguration', 'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilDomainExt',
-    'DomainBackupConfiguration', 'VeilLibrary', 'VeilNode', 'VeilController',
+    'DomainBackupConfiguration', 'VeilEvent', 'VeilLibrary', 'VeilNode', 'VeilController',
     'VeilDataPool', 'VeilResourcePool', 'VeilVDisk', 'VeilCluster',
     'DomainUpdateConfiguration'
 )
