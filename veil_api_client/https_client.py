@@ -19,7 +19,7 @@ except ImportError:  # pragma: no cover
     aiohttp = None
 
 from .api_objects import (VeilCluster, VeilController, VeilDataPool,
-                          VeilDomainExt, VeilLibrary, VeilNode, VeilResourcePool,
+                          VeilDomainExt, VeilEvent, VeilLibrary, VeilNode, VeilResourcePool,
                           VeilVDisk)
 from .base import VeilRetryConfiguration, VeilTag, VeilTask
 from .base.api_cache import VeilCacheConfiguration, cached_response
@@ -555,6 +555,15 @@ class VeilClient:
         return VeilLibrary(client=self, api_object_id=library_id,
                            retry_opts=retry_opts,
                            cache_opts=cache_opts)
+
+    def event(self, event_id: Optional[str] = None,
+              retry_opts: Optional[VeilRetryConfiguration] = None,
+              cache_opts: Optional[VeilCacheConfiguration] = None) -> 'VeilEvent':  # noqa: E501
+        """Return VeilResourcePool entity."""
+        return VeilEvent(client=self,
+                         api_object_id=event_id,
+                         retry_opts=retry_opts,
+                         cache_opts=cache_opts)
 
 
 class VeilClientSingleton:

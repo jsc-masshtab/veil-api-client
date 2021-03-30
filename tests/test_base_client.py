@@ -6,7 +6,7 @@ import pytest
 
 from veil_api_client import VeilClient, VeilClientSingleton, VeilRetryConfiguration
 from veil_api_client.api_objects import (VeilCluster, VeilController, VeilDataPool,
-                                         VeilDomainExt,
+                                         VeilDomainExt, VeilEvent,
                                          VeilLibrary, VeilNode, VeilResourcePool, VeilVDisk)
 from veil_api_client.base import VeilTag, VeilTask
 
@@ -196,6 +196,12 @@ class TestVeilClient:
         """Basic datapool __init__."""
         obj = veil_cli.data_pool(data_pool_id=known_uid)
         assert isinstance(obj, VeilDataPool)
+        assert obj.api_object_id == known_uid
+
+    async def test_event(self, loop, veil_cli, known_uid):
+        """Basic event __init__."""
+        obj = veil_cli.event(event_id=known_uid)
+        assert isinstance(obj, VeilEvent)
         assert obj.api_object_id == known_uid
 
 
