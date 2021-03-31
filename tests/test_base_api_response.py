@@ -37,6 +37,10 @@ class TestVeilApiResponse:
         assert '200' in good_response.__repr__()
         assert '200: []' in good_response.__str__()
         assert good_response.value == response_value
+        assert good_response.paginator_results == list()
+        assert good_response.paginator_count == 0
+        assert good_response.paginator_next is None
+        assert good_response.paginator_previous is None
         assert good_response.success
         assert good_response.error_code == 0
         assert good_response.error_detail is None
@@ -58,6 +62,9 @@ class TestVeilApiResponse:
                                        api_object=None)
         assert bad_response.value == dict()
         assert bad_response.paginator_results == list()
+        assert bad_response.paginator_count == 0
+        assert bad_response.paginator_next is None
+        assert bad_response.paginator_previous is None
         assert not bad_response.success
         assert bad_response.error_code == 1000
         assert bad_response.error_detail == 'URL is not found.'
@@ -74,12 +81,18 @@ class TestVeilApiResponse:
         """Test properties and magic methods for list."""
         # Good cases
         response_value = {'id': str(uuid4())}
-        response_list_value = {'results': [response_value]}
+        response_list_value = {'results': [response_value],
+                               'count': 10,
+                               'next': 'https://127.0.0.1/list&page2',
+                               'previous': None}
         good_response = VeilApiResponse(status_code=200,
                                         data=response_list_value,
                                         headers=None,
                                         api_object=VeilVDisk(client=None, api_object_id=None))
         assert good_response.paginator_results == [response_value]
+        assert good_response.paginator_count == 10
+        assert good_response.paginator_next == 'https://127.0.0.1/list&page2'
+        assert good_response.paginator_previous is None
         assert good_response.value == response_list_value
         assert isinstance(good_response.response, list)
         assert isinstance(good_response.response[0], VeilVDisk)

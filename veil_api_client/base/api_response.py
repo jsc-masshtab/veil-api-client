@@ -49,11 +49,30 @@ class VeilApiResponse:
     @property
     def paginator_results(self) -> list:
         """Value of results key from response data. May presents only in list() queries."""
-        # Экспериментальный блок - нет уверенности, что у VeiL все ответы такие.
-        if self.status_code != 200 or not isinstance(self.data, dict) or 'results' not in self.data.keys():  # noqa: E501
+        if self.status_code != 200 or not isinstance(self.data, dict):
             return list()
-        else:
-            return self.data['results']
+        return self.data.get('results', list())
+
+    @property
+    def paginator_count(self) -> int:
+        """Value of count from response data. On info() query will be 0."""
+        if self.status_code != 200 or not isinstance(self.data, dict):
+            return 0
+        return self.data.get('count', 0)
+
+    @property
+    def paginator_next(self) -> str:
+        """Value of next from response data. On info() query will be None."""
+        if self.status_code != 200 or not isinstance(self.data, dict):
+            return
+        return self.data.get('next')
+
+    @property
+    def paginator_previous(self) -> str:
+        """Value of previous from response data. On info() query will be None."""
+        if self.status_code != 200 or not isinstance(self.data, dict):
+            return
+        return self.data.get('previous')
 
     @property
     def value(self) -> dict:
