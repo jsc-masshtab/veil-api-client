@@ -5,7 +5,7 @@
 for additional info see README.md
 """
 
-__version__ = '2.2.4'
+__version__ = '2.2.5'
 
 from .api_objects import (DomainBackupConfiguration, DomainConfiguration, DomainTcpUsb,
                           DomainUpdateConfiguration, VeilDomainExt, VeilGuestAgentCmd)
