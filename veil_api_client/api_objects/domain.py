@@ -753,3 +753,9 @@ class VeilDomain(VeilApiObject):
         """Mount veil utils image to domain."""
         url = self.api_object_url + 'attach-veil-utils-iso/'
         return await self._post(url=url)
+
+    async def change_template(self) -> 'ClientResponse':
+        """Change template for domain and template's thin clones."""
+        url = self.api_object_url + 'change-template/'
+        response = await self._post(url=url)
+        return response

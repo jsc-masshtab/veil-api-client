@@ -28,7 +28,7 @@ security_check:
     - pipenv install
     - pipenv lock --requirements > requirements.txt
   script:
-    - safety check -r requirements.txt
+    - safety check -r requirements.txt --ignore=39659
   only:
     - merge_requests
 
