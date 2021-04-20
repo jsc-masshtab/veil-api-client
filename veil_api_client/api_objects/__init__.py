@@ -3,8 +3,10 @@
 from .cluster import VeilCluster
 from .controller import VeilController
 from .data_pool import VeilDataPool
-from .domain import (DomainBackupConfiguration, DomainConfiguration, DomainTcpUsb,
-                     DomainUpdateConfiguration, VeilDomain, VeilGuestAgentCmd)
+from .domain import (DomainBackupConfiguration, DomainConfiguration,
+                     DomainRemoteConnectionConfiguration, DomainTcpUsb,
+                     DomainUpdateConfiguration, VeilDomain,
+                     VeilGuestAgentCmd)
 from .event import VeilEvent
 from .library import VeilLibrary
 from .node import VeilNode
@@ -29,5 +31,5 @@ __all__ = (
     'DomainConfiguration', 'VeilGuestAgentCmd', 'DomainTcpUsb', 'VeilDomainExt',
     'DomainBackupConfiguration', 'VeilEvent', 'VeilLibrary', 'VeilNode', 'VeilController',
     'VeilDataPool', 'VeilResourcePool', 'VeilVDisk', 'VeilCluster',
-    'DomainUpdateConfiguration'
+    'DomainUpdateConfiguration', 'DomainRemoteConnectionConfiguration'
 )

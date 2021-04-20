@@ -3,7 +3,9 @@
 import sys
 from enum import Enum, IntEnum
 from typing import List, Optional
+from urllib.parse import parse_qsl, urlparse
 from uuid import uuid4
+
 
 try:
     from aiohttp.client_reqrep import ClientResponse
@@ -110,11 +112,56 @@ class DomainUpdateConfiguration(VeilConfiguration):
         self.spice_stream = spice_stream
         self.no_empty_check()
 
-    def no_empty_check(self):
-        """Checking that there is something to change."""  # noqa: D401
-        if not self.notnull_attrs:
-            raise ValueError(
-                'All attributes are empty. Choose at least something.')
+
+class DomainRemoteConnectionConfiguration(VeilConfiguration):
+    """Veil domain remote configuration description.
+
+    Attributes:
+        connection_url: a remote connection full url
+        connection_type: a remote connection type
+        host: remote connection host
+        password: password for a remote connection
+        path: websockify?token
+
+    Note:
+        full connection url should be like:
+        /spice-html5/spice_auto.html?host=192.168.11.102&password=SPkKast...&path=websockify?token=2385c0a9-940f...
+    """
+
+    def __init__(self, connection_url: str, connection_type: str):
+        """Please see help(DomainRemoteConnectionConfiguration) for more info."""
+        self.connection_url = connection_url
+        self.connection_type = connection_type
+        self.host = None
+        self.password = None
+        self.path = None
+        # parse connection url and set host, password and path.
+        self.parse_connection_url()
+        self.no_empty_check()
+
+    def __repr__(self):
+        """Original repr and additional info."""
+        original_repr = super().__repr__()
+        return '{} : {} : {}'.format(original_repr, self.connection_url, self.vnc)  # noqa: E501
+
+    def __str__(self):
+        """Just verbose_name."""
+        return '{}'.format(self.connection_url)
+
+    def parse_connection_url(self):
+        """Parse DomainRemoteConnectionConfiguration.connection_url arguments."""
+        parsed_result = urlparse(self.connection_url)
+        query_str = parsed_result.query
+        if not query_str or not isinstance(query_str, str):
+            return
+        parsed_query_args = parse_qsl(query_str)
+        self.set_attrs(parsed_query_args)
+
+    @property
+    def token(self):
+        """Extract token from path."""
+        if self.path and isinstance(self.path, str):
+            return self.path.replace('websockify?token=', '')
 
 
 class MultiManagerAction(Enum):
@@ -393,6 +440,22 @@ class VeilDomain(VeilApiObject):
             file=sys.stderr,
         )
         return await self.is_in_ad()
+
+    async def spice_conn(self) -> 'DomainRemoteConnectionConfiguration':
+        """Return dict with spice connection attributes."""
+        spice_response = await self.spice()
+        if spice_response.success and spice_response.value:
+            spice_url = spice_response.value.get('spice_url')
+            return DomainRemoteConnectionConfiguration(connection_url=spice_url,
+                                                       connection_type='SPICE')
+
+    async def vnc_conn(self) -> 'DomainRemoteConnectionConfiguration':
+        """Return dict with vnc connection attributes."""
+        vnc_response = await self.vnc()
+        if vnc_response.success and vnc_response.value:
+            vnc_url = vnc_response.value.get('vnc_url')
+            return DomainRemoteConnectionConfiguration(connection_url=vnc_url,
+                                                       connection_type='VNC')
 
     async def is_in_ad(self) -> bool:
         """Windows domain (VM) already in AD."""
@@ -758,4 +821,16 @@ class VeilDomain(VeilApiObject):
         """Change template for domain and template's thin clones."""
         url = self.api_object_url + 'change-template/'
         response = await self._post(url=url)
+        return response
+
+    async def spice(self) -> 'ClientResponse':
+        """Spice connection url endpoint."""
+        url = self.api_object_url + 'spice/'
+        response = await self._get(url=url)
+        return response
+
+    async def vnc(self) -> 'ClientResponse':
+        """VNC connection url endpoint."""
+        url = self.api_object_url + 'vnc/'
+        response = await self._get(url=url)
         return response
