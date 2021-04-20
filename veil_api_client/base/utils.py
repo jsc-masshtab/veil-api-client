@@ -6,6 +6,7 @@ import re
 import typing
 from uuid import UUID
 
+
 try:
     from aiohttp.client_reqrep import ClientResponse
 except ImportError:  # pragma: no cover
@@ -268,6 +269,17 @@ class VeilConfiguration:
     def notnull_attrs(self) -> dict:
         """Return only attributes with values."""
         return {attr: self.__dict__[attr] for attr in self.__dict__ if self.__dict__[attr] is not None}  # noqa: E501
+
+    def no_empty_check(self):
+        """Checking that there is something to change."""  # noqa: D401
+        if not self.notnull_attrs:
+            raise ValueError(
+                'All attributes are empty. Choose at least something.')
+
+    def set_attrs(self, attrs_tuple: tuple) -> None:
+        """Set class attributes with tuple pairs."""
+        for attr_pair in attrs_tuple:
+            self.__setattr__(*attr_pair)
 
 
 class VeilEntityConfiguration(VeilConfiguration):
