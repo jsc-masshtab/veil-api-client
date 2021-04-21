@@ -65,6 +65,7 @@ class TestDomainConfigurations:
         assert drc.host == '192.168.11.102'
         assert drc.password == 'SPkKastQjQD'
         assert drc.token == 'bebdc920-ac17'
+        assert drc.valid
 
     def test_domain_remote_connection_configuration_init_2(self):
         """Basic DomainRemoteConnectionConfiguration.__init__ test."""
@@ -74,6 +75,7 @@ class TestDomainConfigurations:
         assert drc.host == '192.168.11.102'
         assert drc.password == 'SPkKastQjQ'
         assert drc.token == '2385c0a9-940f'
+        assert drc.valid
 
     def test_domain_remote_connection_configuration_init_3(self):
         """Basic DomainRemoteConnectionConfiguration.__init__ test."""
@@ -83,3 +85,24 @@ class TestDomainConfigurations:
         assert not drc.host
         assert not drc.password
         assert not drc.token
+        assert not drc.valid
+
+    def test_domain_remote_connection_configuration_init_4(self):
+        """Basic DomainRemoteConnectionConfiguration.__init__ test."""
+        url = '/spice-html5/spice_auto.html?host=192.168.11.102&password=SPkKastQjQ&path=websockify'  # noqa: E501
+        drc = DomainRemoteConnectionConfiguration(connection_url=url,
+                                                  connection_type='SPICE')
+        assert drc.host == '192.168.11.102'
+        assert drc.password == 'SPkKastQjQ'
+        assert not drc.token
+        assert not drc.valid
+
+    def test_domain_remote_connection_configuration_init_5(self):
+        """Basic DomainRemoteConnectionConfiguration.__init__ test."""
+        url = '/spice-html5/spice_auto.html?password=SPkKastQjQ&path=websockify'
+        drc = DomainRemoteConnectionConfiguration(connection_url=url,
+                                                  connection_type='SPICE')
+        assert not drc.host == '192.168.11.102'
+        assert drc.password == 'SPkKastQjQ'
+        assert not drc.token
+        assert not drc.valid

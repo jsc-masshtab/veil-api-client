@@ -5,7 +5,7 @@
 for additional info see README.md
 """
 
-__version__ = '2.2.6'
+__version__ = '2.2.7'
 
 from .api_objects import (DomainBackupConfiguration, DomainConfiguration,
                           DomainRemoteConnectionConfiguration, DomainTcpUsb,

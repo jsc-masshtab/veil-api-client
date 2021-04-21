@@ -122,7 +122,9 @@ class DomainRemoteConnectionConfiguration(VeilConfiguration):
         host: remote connection host
         password: password for a remote connection
         path: websockify?token
-
+    Properties:
+        token: extract token from a path.
+        valid: check that host, password and token present.
     Note:
         full connection url should be like:
         /spice-html5/spice_auto.html?host=192.168.11.102&password=SPkKast...&path=websockify?token=2385c0a9-940f...
@@ -160,8 +162,14 @@ class DomainRemoteConnectionConfiguration(VeilConfiguration):
     @property
     def token(self):
         """Extract token from path."""
-        if self.path and isinstance(self.path, str):
-            return self.path.replace('websockify?token=', '')
+        search_pattern = 'websockify?token='
+        if self.path and isinstance(self.path, str) and self.path.find(search_pattern) >= 0:
+            return self.path.replace(search_pattern, '')
+
+    @property
+    def valid(self) -> bool:
+        """Check that host, password and token is not empty."""
+        return bool(self.token and self.host and self.password)
 
 
 class MultiManagerAction(Enum):
