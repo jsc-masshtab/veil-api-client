@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 from asyncio import iscoroutinefunction
 from typing import Optional
 
-from .utils import IntType, VeilConfiguration, VeilRetryConfiguration
+from .utils import IntType, VeilAbstractConfiguration, VeilRetryConfiguration
 
 logger = logging.getLogger('veil-api-client.request')
 logger.addHandler(logging.NullHandler())
@@ -32,7 +32,7 @@ class VeilCacheAbstractClient(metaclass=ABCMeta):
         pass  # pragma: no cover
 
 
-class VeilCacheConfiguration(VeilConfiguration):
+class VeilCacheConfiguration(VeilAbstractConfiguration):
     """VeilApiClient cache options.
 
     Arguments:

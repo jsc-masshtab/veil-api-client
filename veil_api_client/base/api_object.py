@@ -13,12 +13,12 @@ except ImportError:  # pragma: no cover
 from .api_cache import VeilCacheConfiguration
 from .api_response import VeilApiResponse
 from .utils import (HexColorType, NullableIntType, NullableStringType,
-                    StringType, UuidStringType, VeilConfiguration,
+                    StringType, UuidStringType, VeilAbstractConfiguration,
                     VeilEntityConfiguration, VeilEntityConfigurationType,
                     VeilRetryConfiguration, VeilSlugType, argument_type_checker_decorator)
 
 
-class VeilRestPaginator(VeilConfiguration):
+class VeilRestPaginator(VeilAbstractConfiguration):
     """VeiL Paginator interface.
 
     Attributes:
@@ -442,7 +442,7 @@ class VeilTask(VeilApiObject):
         return await super().list(paginator=paginator, extra_params=params)
 
 
-class TagConfiguration(VeilConfiguration):
+class TagConfiguration(VeilAbstractConfiguration):
     """Simplified Veil tag description.
 
     Attributes:

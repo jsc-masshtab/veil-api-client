@@ -14,53 +14,46 @@ except ImportError:  # pragma: no cover
 
 from ..base import (VeilApiObject, VeilCacheConfiguration,
                     VeilRestPaginator, VeilRetryConfiguration)
-from ..base.utils import (BoolType, NullableBoolType, NullableStringType,
-                          NullableUuidStringType, StringType,
-                          UuidStringType, VeilConfiguration,
-                          argument_type_checker_decorator)
+from ..base.utils import (BoolType, IntType, NullableBoolType,
+                          NullableStringType, NullableUuidStringType,
+                          StringType, UuidStringType,
+                          VeilAbstractConfiguration, argument_type_checker_decorator)
 
 
-class DomainConfiguration(VeilConfiguration):
-    """Simplified Veil domain description.
+class DomainMultiConfiguration(VeilAbstractConfiguration):
+    """Veil domain description.
 
-    Structure for VeiL domain copy.
+    Structure for VeiL domain clone or creation.
     (resource_pool) and (node + datapool) are mutually exclusive parameters -> see mutually_check method  # noqa: E501
-
 
     Attributes:
         verbose_name: domain verbose name.
         resource_pool: VeiL resource pool id(uuid).
         node: VeiL node id(uuid).
         datapool: VeiL data-pool id(uuid).
-        parent: VeiL parent domain id(uuid).
-        thin: created domain should be a thin clone of parent domain.
+        count: the number of VMs to create (int).
     """
 
     verbose_name = StringType('verbose_name')
     resource_pool = NullableUuidStringType('resource_pool')
     node = NullableUuidStringType('node')
     datapool = NullableUuidStringType('datapool')
-    parent = UuidStringType('parent')
-    thin = BoolType('thin')
+    count = IntType('count')
 
     def __init__(self, verbose_name: str,
-                 parent: str,
                  resource_pool: Optional[str] = None,
                  node: Optional[str] = None,
                  datapool: Optional[str] = None,
-                 thin: bool = True,
-                 count: int = 1
-                 ) -> None:
-        """Please see help(DomainConfiguration) for more info."""
+                 count: int = 1,
+                 ):
+        """Please see help(DomainMultiConfiguration) for more info."""
         self.resource_pool = resource_pool
         self.node = node
         self.datapool = datapool
-        self.mutually_check()
         self.verbose_name = verbose_name
-        self.parent = parent
-        self.thin = thin
         self.count = count
-        self.domains_ids = [str(uuid4()) for i in range(count)]
+        self.mutually_check()
+        self.domains_ids = [str(uuid4()) for i in range(self.count)]
 
     def mutually_check(self):
         """Validate mutually exclusive parameters.
@@ -73,7 +66,71 @@ class DomainConfiguration(VeilConfiguration):
                     self.resource_pool, self.node, self.datapool))
 
 
-class DomainUpdateConfiguration(VeilConfiguration):
+class DomainCloneConfiguration(DomainMultiConfiguration):
+    """Simplified Veil domain clone description.
+
+    Structure for Veil domain clone.
+
+    Attributes:
+        snapshot: snapshot id of VMs memory for cloning.
+        start_on: start created vms.
+    """
+
+    snapshot = NullableUuidStringType('snapshot')
+    start_on = BoolType('start_on')
+
+    def __init__(self, verbose_name: str,
+                 resource_pool: Optional[str] = None,
+                 node: Optional[str] = None,
+                 datapool: Optional[str] = None,
+                 start_on: bool = False,
+                 count: int = 1,
+                 snapshot: Optional[str] = None
+                 ) -> None:
+        """Please see help(DomainCloneConfiguration) for more info."""
+        super().__init__(verbose_name=verbose_name,
+                         resource_pool=resource_pool,
+                         node=node,
+                         datapool=datapool,
+                         count=count)
+        self.start_on = start_on
+        self.snapshot = snapshot
+
+
+class DomainConfiguration(DomainMultiConfiguration):
+    """Simplified Veil domain description.
+
+    Structure for VeiL domain copy.
+    (resource_pool) and (node + datapool) are mutually exclusive parameters -> see mutually_check method  # noqa: E501
+
+
+    Attributes:
+        parent: VeiL parent domain id(uuid).
+        thin: created domain should be a thin clone of parent domain.
+    """
+
+    parent = UuidStringType('parent')
+    thin = BoolType('thin')
+
+    def __init__(self, verbose_name: str,
+                 parent: str,
+                 resource_pool: Optional[str] = None,
+                 node: Optional[str] = None,
+                 datapool: Optional[str] = None,
+                 thin: bool = True,
+                 count: int = 1
+                 ) -> None:
+        """Please see help(DomainConfiguration) for more info."""
+        super().__init__(verbose_name=verbose_name,
+                         resource_pool=resource_pool,
+                         node=node,
+                         datapool=datapool,
+                         count=count)
+        self.parent = parent
+        self.thin = thin
+
+
+class DomainUpdateConfiguration(VeilAbstractConfiguration):
     """Simplified Veil DomainUpdate description.
 
     Attributes:
@@ -113,7 +170,7 @@ class DomainUpdateConfiguration(VeilConfiguration):
         self.no_empty_check()
 
 
-class DomainRemoteConnectionConfiguration(VeilConfiguration):
+class DomainRemoteConnectionConfiguration(VeilAbstractConfiguration):
     """Veil domain remote configuration description.
 
     Attributes:
@@ -277,7 +334,7 @@ class DomainGuestUtils:
         return all(isinstance(ip, str) and apipa_case in ip for ip in self.ipv4)
 
 
-class DomainBackupConfiguration(VeilConfiguration):
+class DomainBackupConfiguration(VeilAbstractConfiguration):
     """Domain backup options.
 
     Attributes:
@@ -663,6 +720,13 @@ class VeilDomain(VeilApiObject):
     async def create(self, domain_configuration: DomainConfiguration) -> 'ClientResponse':
         """Run multi-create-domain on VeiL ECP."""
         url = self.base_url + 'multi-create-domain/'
+        response = await self._post(url=url, json_data=domain_configuration.notnull_attrs)
+        return response
+
+    @argument_type_checker_decorator
+    async def clone(self, domain_configuration: DomainCloneConfiguration) -> 'ClientResponse':
+        """Run clone for existing domain on VeiL ECP."""
+        url = self.api_object_url + 'clone/'
         response = await self._post(url=url, json_data=domain_configuration.notnull_attrs)
         return response
 
