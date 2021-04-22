@@ -418,7 +418,7 @@ loop.run_until_complete(extra_main())
 
 ### %Configuration
 Для дополнительной валидации (и из-за отсутствия дата классов) конфигурируемые параметры вынесены в отдельные 
-классы-потомки супер-класса VeilConfiguration. Ниже идет их перечисление.
+классы-потомки супер-класса VeilAbstractConfiguration. Ниже идет их перечисление.
 
 #### VeilCacheConfiguration
 Возможность передать пользовательский кэш.
@@ -476,6 +476,19 @@ loop.run_until_complete(extra_main())
 * datapool - пул данных VeiL ECP для создания ВМ.
 * parent - шаблон VeiL ECP на основе которого необходимо выполнить копирование ВМ.
 * thin - новая ВМ будет являться тонким клоном ее родителя.
+* count - количество ВМ для создания
+
+#### DomainCloneConfiguration
+Упрощенное описание параметров клонирования виртуальной машины (domain) на VeiL ECP.
+*Используется как аргумент domain_configuration в методе **VeilDomainExt.clone***
+
+* verbose_name - имя создаваемой ВМ.
+* resource_pool - пул ресурсов VeiL ECP для создания ВМ.
+* node - узел VeiL ECP для создания ВМ.
+* datapool - пул данных VeiL ECP для создания ВМ.
+* snapshot - шаблон VeiL ECP на основе которого необходимо выполнить копирование ВМ.
+* count - количество ВМ для создания
+* start_on - включить создаваемые ВМ
 
 #### DomainUpdateConfiguration
 Упрощенное описание параметров редактирования виртуальной машины (domain) на VeiL ECP.

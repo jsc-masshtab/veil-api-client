@@ -4,6 +4,7 @@ import functools
 import inspect
 import re
 import typing
+from abc import ABCMeta, abstractmethod
 from uuid import UUID
 
 
@@ -262,8 +263,13 @@ def veil_api_response(func) -> 'VeilApiResponse':
     return wrapper
 
 
-class VeilConfiguration:
+class VeilAbstractConfiguration(metaclass=ABCMeta):
     """Abstract VeiL configuration."""
+
+    @abstractmethod
+    def __init__(self, *args, **kwargs):
+        """Please determine your own __init__."""
+        pass  # pragma: no cover
 
     @property
     def notnull_attrs(self) -> dict:
@@ -282,7 +288,7 @@ class VeilConfiguration:
             self.__setattr__(*attr_pair)
 
 
-class VeilEntityConfiguration(VeilConfiguration):
+class VeilEntityConfiguration(VeilAbstractConfiguration):
     """VeiL Entity struct.
 
     Attributes:
@@ -326,7 +332,7 @@ class VeilEntityConfigurationType(TypeChecker):
             raise TypeError('{val} is not a {val_type}'.format(val=value, val_type=self.value_type))  # noqa: E501
 
 
-class VeilRetryConfiguration(VeilConfiguration):
+class VeilRetryConfiguration(VeilAbstractConfiguration):
     """Retry configuration class for veil api client.
 
     Attributes:
