@@ -32,6 +32,7 @@ class DomainMultiConfiguration(VeilAbstractConfiguration):
         node: VeiL node id(uuid).
         datapool: VeiL data-pool id(uuid).
         count: the number of VMs to create (int).
+        template: the created VM should be a template.
     """
 
     verbose_name = StringType('verbose_name')
@@ -39,12 +40,14 @@ class DomainMultiConfiguration(VeilAbstractConfiguration):
     node = NullableUuidStringType('node')
     datapool = NullableUuidStringType('datapool')
     count = IntType('count')
+    template = BoolType('template')
 
     def __init__(self, verbose_name: str,
                  resource_pool: Optional[str] = None,
                  node: Optional[str] = None,
                  datapool: Optional[str] = None,
                  count: int = 1,
+                 template: bool = False
                  ):
         """Please see help(DomainMultiConfiguration) for more info."""
         self.resource_pool = resource_pool
@@ -52,6 +55,7 @@ class DomainMultiConfiguration(VeilAbstractConfiguration):
         self.datapool = datapool
         self.verbose_name = verbose_name
         self.count = count
+        self.template = template
         self.mutually_check()
         self.domains_ids = [str(uuid4()) for i in range(self.count)]
 
@@ -85,14 +89,16 @@ class DomainCloneConfiguration(DomainMultiConfiguration):
                  datapool: Optional[str] = None,
                  start_on: bool = False,
                  count: int = 1,
-                 snapshot: Optional[str] = None
+                 snapshot: Optional[str] = None,
+                 template: bool = False
                  ) -> None:
         """Please see help(DomainCloneConfiguration) for more info."""
         super().__init__(verbose_name=verbose_name,
                          resource_pool=resource_pool,
                          node=node,
                          datapool=datapool,
-                         count=count)
+                         count=count,
+                         template=template)
         self.start_on = start_on
         self.snapshot = snapshot
 
@@ -118,14 +124,16 @@ class DomainConfiguration(DomainMultiConfiguration):
                  node: Optional[str] = None,
                  datapool: Optional[str] = None,
                  thin: bool = True,
-                 count: int = 1
+                 count: int = 1,
+                 template: bool = False
                  ) -> None:
         """Please see help(DomainConfiguration) for more info."""
         super().__init__(verbose_name=verbose_name,
                          resource_pool=resource_pool,
                          node=node,
                          datapool=datapool,
-                         count=count)
+                         count=count,
+                         template=template)
         self.parent = parent
         self.thin = thin
 
