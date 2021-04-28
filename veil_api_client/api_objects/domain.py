@@ -578,7 +578,8 @@ class VeilDomain(VeilApiObject):
                         login: str,
                         password: str,
                         restart: bool = True,
-                        new_name: Optional[str] = None) -> 'ClientResponse':
+                        new_name: Optional[str] = None,
+                        oupath: Optional[str] = None) -> 'ClientResponse':
         """Add domain (VM) to AD.
 
         domain_name: str Specifies the domain to which the computers are added
@@ -586,6 +587,7 @@ class VeilDomain(VeilApiObject):
         password: str AD user password
         restart: bool restart VM that was added to the domain or workgroup
         new_name: str Specifies a new name for the computer in the new domain
+        oupath: OUPath parameter to specify the organizational unit for the new accounts
         """
         url = self.api_object_url + 'add-to-ad/'
         body = dict(domainname=domain_name, login=login, password=password)
@@ -593,6 +595,8 @@ class VeilDomain(VeilApiObject):
             body['restart'] = 1
         if new_name:
             body['newname'] = new_name
+        if oupath:
+            body['oupath'] = oupath
         response = await self._post(url=url, json_data=body)
         return response
 
