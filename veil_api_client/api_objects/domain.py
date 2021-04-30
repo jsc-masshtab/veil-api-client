@@ -656,7 +656,8 @@ class VeilDomain(VeilApiObject):
     async def detach_usb(self, action_type: Optional[str] = None,
                          controller_order: Optional[int] = None,
                          usb: Optional[str] = None,
-                         remove_all: bool = True):
+                         remove_all: bool = True,
+                         no_task: bool = False):
         """Detach usb devices from VM."""
         if action_type is None:
             action_type = 'tcp_usb_device'
@@ -668,7 +669,8 @@ class VeilDomain(VeilApiObject):
             body['usb'] = usb
         if remove_all:
             body['remove_all'] = 1
-        response = await self._post(url=url, json_data=body)
+        extra_params = {'async': 0} if no_task else None
+        response = await self._post(url=url, json_data=body, extra_params=extra_params)
         return response
 
     async def start(self, force: bool = False) -> 'ClientResponse':
