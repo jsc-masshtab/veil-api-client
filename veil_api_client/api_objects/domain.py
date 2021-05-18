@@ -789,7 +789,11 @@ class VeilDomain(VeilApiObject):
             extra_params['template'] = self.template
         # Additional request parameters
         if fields and isinstance(fields, list):
-            extra_params['fields'] = ','.join(fields)
+            # Get all related fields
+            if len(fields) == 1 and fields[0] == '__all__':
+                extra_params['all_content'] = 1
+            else:
+                extra_params['fields'] = ','.join(fields)
         if params:
             extra_params.update(params)
         return await super().list(paginator=paginator, extra_params=extra_params)
