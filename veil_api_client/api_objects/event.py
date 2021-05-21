@@ -36,13 +36,17 @@ class VeilEvent(VeilApiObject):
                    user: str = None,
                    event_type: str = None,
                    paginator: VeilRestPaginator = None,
-                   extra_params: dict = None):
+                   extra_params: dict = None,
+                   extra_headers: dict = None):
         """List of events on ECP VeiL."""
         params = dict()
+        if not extra_headers:
+            extra_headers = {'Accept-Language': 'ru'}
         if user:
             params['user'] = user
         if event_type:
             params['type'] = event_type
         if extra_params:
             params.update(extra_params)
-        return await super().list(paginator=paginator, extra_params=params)
+        return await super().list(paginator=paginator, extra_params=params,
+                                  extra_headers=extra_headers)

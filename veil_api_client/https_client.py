@@ -382,19 +382,23 @@ class VeilClient:
 
     async def get(self, api_object, url: str,
                   extra_params: Optional[dict] = None,
+                  extra_headers: Optional[dict] = None,
                   retry_opts: Optional[VeilRetryConfiguration] = None,
                   cache_opts: Optional[VeilCacheConfiguration] = None) -> Dict[str, str]:
         """Send GET request to VeiL ECP."""
         params = self.__params
         if extra_params:
             params.update(extra_params)
+        headers = self.__headers
+        if extra_headers:
+            headers.update(extra_headers)
         if not cache_opts:
             cache_opts = self.__cache_opts
         logger.debug('%s GET request.', api_object.__class__.__name__)
         return await self.api_request(api_object=api_object,
                                       method_name='get',
                                       url=url,
-                                      headers=self.__headers,
+                                      headers=headers,
                                       params=params,
                                       ssl=self.__ssl_enabled,
                                       retry_opts=retry_opts,

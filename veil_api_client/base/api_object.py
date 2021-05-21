@@ -126,6 +126,7 @@ class VeilApiObject:
         return self.__class__(client=self._client, api_object_id=self.api_object_id)
 
     async def _get(self, url: str, extra_params: Optional[dict] = None,
+                   extra_headers: Optional[dict] = None,
                    retry_opts: Optional[VeilRetryConfiguration] = None,
                    cache_opts: Optional[VeilCacheConfiguration] = None) -> 'ClientResponse':
         """Layer for calling a client GET method.
@@ -140,6 +141,7 @@ class VeilApiObject:
         return await self._client.get(api_object=self,
                                       url=url,
                                       extra_params=extra_params,
+                                      extra_headers=extra_headers,
                                       retry_opts=retry_opts,
                                       cache_opts=cache_opts)
 
@@ -276,12 +278,13 @@ class VeilApiObject:
 
     @argument_type_checker_decorator  # noqa: A003
     async def list(self, paginator: VeilRestPaginator = None,
-                   extra_params: dict = None):
+                   extra_params: dict = None, extra_headers: dict = None):
         """List all objects of Veil api object class."""
         params = paginator.notnull_attrs if paginator else dict()
         if extra_params:
             params.update(extra_params)
-        return await self._get(self.base_url, extra_params=params)
+        return await self._get(self.base_url, extra_params=params,
+                               extra_headers=extra_headers)
 
     async def info(self):
         """Get api object instance and update public attrs."""
