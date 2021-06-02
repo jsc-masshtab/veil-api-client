@@ -924,3 +924,17 @@ class VeilDomain(VeilApiObject):
         url = self.api_object_url + 'vnc/'
         response = await self._get(url=url)
         return response
+
+    async def convert_to_template(self) -> 'ClientResponse':
+        """Convert VM to template url endpoint."""
+        url = self.api_object_url + 'template/'
+        data = {'template': True}
+        response = await self._put(url=url, json_data=data)
+        return response
+
+    async def convert_to_vm(self) -> 'ClientResponse':
+        """Convert template to VM url endpoint."""
+        url = self.api_object_url + 'template/'
+        data = {'template': False}
+        response = await self._put(url=url, json_data=data)
+        return response
