@@ -814,7 +814,8 @@ class VeilDomain(VeilApiObject):
             migrate
         """
         url = self.base_url + 'multi-manager/'
-        body = dict(full=full, force=force, entity_ids=entity_ids, action=action.value)
+        options = dict(full=full, force=force)
+        body = dict(entity_ids=entity_ids, action=action.value, options=options)
         response = await self._post(url=url, json_data=body)
         return response
 
