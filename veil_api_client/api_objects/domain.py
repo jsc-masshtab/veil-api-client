@@ -765,7 +765,7 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def list(self, with_vdisks: bool = True,  # noqa: A003
+    async def list(self, with_vdisks = None,  # noqa: A003
                    paginator: VeilRestPaginator = None,
                    fields: List[str] = None,
                    params: dict = None) -> 'ClientResponse':
@@ -773,7 +773,9 @@ class VeilDomain(VeilApiObject):
 
         By default get only domains with vdisks.
         """
-        extra_params = dict(with_vdisks=int(with_vdisks))
+        extra_params = dict()
+        if isinstance(with_vdisks, int):
+            extra_params = dict(with_vdisks=int(with_vdisks))
         if self.resource_pool:
             extra_params['resource_pool'] = self.resource_pool
         if self.cluster_id:
