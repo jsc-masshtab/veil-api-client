@@ -612,6 +612,46 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
+    async def prepare(self,
+                        remote_access: bool = True,
+                        start: bool = False,
+                        hostname: str = None,
+                        domain_name: str = None,
+                        login: str = None,
+                        password: str = None,
+                        restart: bool = True,
+                        new_name: Optional[str] = None,
+                        oupath: Optional[str] = None) -> 'ClientResponse':
+        """Prepare domain (VM).
+
+        remote_access: bool Enable domain remote-access
+        start: bool start VM
+        hostname: str Set VM hostname
+        domain_name: str Specifies the domain to which the computers are added
+        login: str AD user which can add VM to domain
+        password: str AD user password
+        restart: bool restart VM that was added to the domain or workgroup
+        new_name: str Specifies a new name for the computer in the new domain
+        oupath: OUPath parameter to specify the organizational unit for the new accounts
+        """
+        url = self.api_object_url + 'vdi-prepare/'
+        body = dict(remote_access=remote_access)
+        if start:
+            body['start'] = True
+        if hostname:
+            body['set_hostname'] = dict(hostname=hostname)
+        if domain_name and login and password:
+            set_ad = dict(domainname=domain_name, login=login, password=password)
+            if restart:
+                set_ad['restart'] = 1
+            if new_name:
+                set_ad['newname'] = new_name
+            if oupath:
+                set_ad['oupath'] = oupath
+            body['set_ad'] = set_ad
+        response = await self._post(url=url, json_data=body)
+        return response
+
     async def add_to_ad_group(self, computer_name: str,
                               domain_username: str,
                               domain_password: str,
