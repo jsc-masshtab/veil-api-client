@@ -613,15 +613,15 @@ class VeilDomain(VeilApiObject):
         return response
 
     async def prepare(self,
-                        remote_access: bool = True,
-                        start: bool = False,
-                        hostname: str = None,
-                        domain_name: str = None,
-                        login: str = None,
-                        password: str = None,
-                        restart: bool = True,
-                        new_name: Optional[str] = None,
-                        oupath: Optional[str] = None) -> 'ClientResponse':
+                      remote_access: bool = True,
+                      start: bool = False,
+                      hostname: str = None,
+                      domain_name: str = None,
+                      login: str = None,
+                      password: str = None,
+                      restart: bool = True,
+                      new_name: Optional[str] = None,
+                      oupath: Optional[str] = None) -> 'ClientResponse':
         """Prepare domain (VM).
 
         remote_access: bool Enable domain remote-access
@@ -805,7 +805,7 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def list(self, with_vdisks = None,  # noqa: A003
+    async def list(self, with_vdisks: int = None,  # noqa: A003
                    paginator: VeilRestPaginator = None,
                    fields: List[str] = None,
                    params: dict = None) -> 'ClientResponse':
