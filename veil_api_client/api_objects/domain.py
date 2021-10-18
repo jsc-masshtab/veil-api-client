@@ -612,6 +612,46 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
+    async def prepare(self,
+                      remote_access: bool = True,
+                      start: bool = False,
+                      hostname: str = None,
+                      domain_name: str = None,
+                      login: str = None,
+                      password: str = None,
+                      restart: bool = True,
+                      new_name: Optional[str] = None,
+                      oupath: Optional[str] = None) -> 'ClientResponse':
+        """Prepare domain (VM).
+
+        remote_access: bool Enable domain remote-access
+        start: bool start VM
+        hostname: str Set VM hostname
+        domain_name: str Specifies the domain to which the computers are added
+        login: str AD user which can add VM to domain
+        password: str AD user password
+        restart: bool restart VM that was added to the domain or workgroup
+        new_name: str Specifies a new name for the computer in the new domain
+        oupath: OUPath parameter to specify the organizational unit for the new accounts
+        """
+        url = self.api_object_url + 'vdi-prepare/'
+        body = dict(remote_access=remote_access)
+        if start:
+            body['start'] = True
+        if hostname:
+            body['set_hostname'] = dict(hostname=hostname)
+        if domain_name and login and password:
+            set_ad = dict(domainname=domain_name, login=login, password=password)
+            if restart:
+                set_ad['restart'] = 1
+            if new_name:
+                set_ad['newname'] = new_name
+            if oupath:
+                set_ad['oupath'] = oupath
+            body['set_ad'] = set_ad
+        response = await self._post(url=url, json_data=body)
+        return response
+
     async def add_to_ad_group(self, computer_name: str,
                               domain_username: str,
                               domain_password: str,
@@ -765,7 +805,7 @@ class VeilDomain(VeilApiObject):
         response = await self._post(url=url, json_data=body)
         return response
 
-    async def list(self, with_vdisks: bool = True,  # noqa: A003
+    async def list(self, with_vdisks: int = None,  # noqa: A003
                    paginator: VeilRestPaginator = None,
                    fields: List[str] = None,
                    params: dict = None) -> 'ClientResponse':
@@ -773,7 +813,9 @@ class VeilDomain(VeilApiObject):
 
         By default get only domains with vdisks.
         """
-        extra_params = dict(with_vdisks=int(with_vdisks))
+        extra_params = dict()
+        if isinstance(with_vdisks, int):
+            extra_params = dict(with_vdisks=int(with_vdisks))
         if self.resource_pool:
             extra_params['resource_pool'] = self.resource_pool
         if self.cluster_id:
@@ -814,7 +856,8 @@ class VeilDomain(VeilApiObject):
             migrate
         """
         url = self.base_url + 'multi-manager/'
-        body = dict(full=full, force=force, entity_ids=entity_ids, action=action.value)
+        options = dict(full=full, force=force)
+        body = dict(entity_ids=entity_ids, action=action.value, options=options)
         response = await self._post(url=url, json_data=body)
         return response
 
