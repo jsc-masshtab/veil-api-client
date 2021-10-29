@@ -47,7 +47,11 @@ class DomainMultiConfiguration(VeilAbstractConfiguration):
                  node: Optional[str] = None,
                  datapool: Optional[str] = None,
                  count: int = 1,
-                 template: bool = False
+                 template: bool = False,
+                 remote_access: bool = False,
+                 start_on: bool = False,
+                 set_hostname: bool = False,
+                 add_to_ad: dict = None
                  ):
         """Please see help(DomainMultiConfiguration) for more info."""
         self.resource_pool = resource_pool
@@ -55,6 +59,10 @@ class DomainMultiConfiguration(VeilAbstractConfiguration):
         self.datapool = datapool
         self.verbose_name = verbose_name
         self.count = count
+        self.remote_access = remote_access
+        self.start_on = start_on
+        self.set_hostname = set_hostname
+        self.add_to_ad = add_to_ad
         self.template = template
         self.mutually_check()
         self.domains_ids = [str(uuid4()) for i in range(self.count)]
@@ -125,15 +133,37 @@ class DomainConfiguration(DomainMultiConfiguration):
                  datapool: Optional[str] = None,
                  thin: bool = True,
                  count: int = 1,
-                 template: bool = False
+                 template: bool = False,
+                 remote_access: bool = False,
+                 start: bool = False,
+                 set_hostname: bool = False,
+                 domain_name: str = None,
+                 login: str = None,
+                 password: str = None,
+                 restart: bool = True,
+                 new_name: Optional[str] = None,
+                 oupath: Optional[str] = None
                  ) -> None:
         """Please see help(DomainConfiguration) for more info."""
+        set_ad = None
+        if domain_name and login and password:
+            set_ad = dict(domainname=domain_name, login=login, password=password)
+            if restart:
+                set_ad['restart'] = 1
+            if new_name:
+                set_ad['newname'] = new_name
+            if oupath:
+                set_ad['oupath'] = oupath
         super().__init__(verbose_name=verbose_name,
                          resource_pool=resource_pool,
                          node=node,
                          datapool=datapool,
                          count=count,
-                         template=template)
+                         template=template,
+                         remote_access=remote_access,
+                         start_on=start,
+                         set_hostname=set_hostname,
+                         add_to_ad=set_ad)
         self.parent = parent
         self.thin = thin
 
@@ -615,7 +645,7 @@ class VeilDomain(VeilApiObject):
     async def prepare(self,
                       remote_access: bool = True,
                       start: bool = False,
-                      hostname: str = None,
+                      set_hostname: bool = False,
                       domain_name: str = None,
                       login: str = None,
                       password: str = None,
@@ -637,9 +667,9 @@ class VeilDomain(VeilApiObject):
         url = self.api_object_url + 'vdi-prepare/'
         body = dict(remote_access=remote_access)
         if start:
-            body['start'] = True
-        if hostname:
-            body['set_hostname'] = dict(hostname=hostname)
+            body['start_on'] = True
+        if set_hostname:
+            body['set_hostname'] = set_hostname
         if domain_name and login and password:
             set_ad = dict(domainname=domain_name, login=login, password=password)
             if restart:
@@ -648,7 +678,7 @@ class VeilDomain(VeilApiObject):
                 set_ad['newname'] = new_name
             if oupath:
                 set_ad['oupath'] = oupath
-            body['set_ad'] = set_ad
+            body['add_to_ad'] = set_ad
         response = await self._post(url=url, json_data=body)
         return response
 

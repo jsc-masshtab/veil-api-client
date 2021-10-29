@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='veil-api-client',
-    version='2.2.15',
+    version='2.2.16',
     author='Aleksey Devyatkin, Emile Gareev',
     author_email='a.devyatkin@mashtab.org, e.gareev@mashtab.org',
     description='VeiL ECP Api client',
