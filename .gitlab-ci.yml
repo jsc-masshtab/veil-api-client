@@ -24,11 +24,11 @@ security_check:
   before_script:
     - apk add build-base
     - python -m pip install --upgrade pip
-    - python -m pip install $PIP_ARGS pipenv==2021.5.29 safety
+    - python -m pip install pipenv safety
     - pipenv install
     - pipenv lock --requirements > requirements.txt
   script:
-    - safety check -r requirements.txt --ignore=39659
+    - safety check -r requirements.txt --ignore=39659 --ignore=42692
   only:
     - merge_requests
 
