@@ -15,7 +15,7 @@ from .api_response import VeilApiResponse
 from .utils import (HexColorType, NullableIntType, NullableStringType,
                     StringType, UuidStringType, VeilAbstractConfiguration,
                     VeilEntityConfiguration, VeilEntityConfigurationType,
-                    VeilRetryConfiguration, VeilSlugType, argument_type_checker_decorator)
+                    VeilRetryConfiguration, argument_type_checker_decorator)
 
 
 class VeilRestPaginator(VeilAbstractConfiguration):
@@ -450,22 +450,18 @@ class TagConfiguration(VeilAbstractConfiguration):
 
     Attributes:
         verbose_name: domain verbose name.
-        slug: VeiL slug str.
         colour: hex-color str (can be null, default is #c0ffee).
     """
 
     verbose_name = StringType('verbose_name')
     colour = HexColorType('colour')
-    slug = VeilSlugType('slug')
 
     def __init__(self,
                  verbose_name: str,
-                 slug: str,
                  colour: Optional[str] = None
                  ) -> None:
         """Please see help(TagConfiguration) for more info."""
         self.verbose_name = verbose_name
-        self.slug = slug
         self.colour = colour
 
 
@@ -491,7 +487,6 @@ class VeilTag(VeilApiObject):
                          api_object_prefix=self.__API_OBJECT_PREFIX,
                          retry_opts=retry_opts,
                          cache_opts=cache_opts)
-        self.slug = None
         self.colour = None
         self.ui_entities = None
 
@@ -519,10 +514,10 @@ class VeilTag(VeilApiObject):
             return
         update_dict = dict()
         if verbose_name:
-            TagConfiguration(verbose_name=verbose_name, slug='empty')
+            TagConfiguration(verbose_name=verbose_name)
             update_dict['verbose_name'] = verbose_name
         if colour:
-            TagConfiguration(colour=colour, slug='empty', verbose_name='empty')
+            TagConfiguration(colour=colour, verbose_name='empty')
             update_dict['colour'] = colour
         response = await self._put(url=self.api_object_url,
                                    json_data=update_dict)
@@ -578,8 +573,6 @@ class VeilTag(VeilApiObject):
                    name: Optional[str] = None):
         """List of tags on ECP VeiL."""
         params = dict()
-        if self.slug:
-            params['slug'] = self.slug
         if entity_uuid:
             params['entity_uuid'] = entity_uuid
         if entity_class:

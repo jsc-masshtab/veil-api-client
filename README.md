@@ -80,7 +80,7 @@ loop.run_until_complete(simple_main())
 tags_response = await session.tag().list()
 
 # Создание тэга
-new_tag1 = TagConfiguration(verbose_name='tag9', slug='tag9_slug')
+new_tag1 = TagConfiguration(verbose_name='tag9')
 tag1_response = await session.tag().create(new_tag1)
 if tag1_response.success:
     task = tag1_response.task  # Таска создания нового тега
@@ -473,7 +473,6 @@ loop.run_until_complete(extra_main())
 Упрощенное описание сущности Tag на VeiL ECP.
 
 * verbose_name - не уникальная строка
-* slug - уникальная строка
 * colour - строка содержащая hex-представление цвета
 
 #### VeilRestPaginator

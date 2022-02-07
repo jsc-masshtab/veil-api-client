@@ -144,19 +144,6 @@ class VeilJwtTokenType(StringType):
             raise TypeError('{val} is not a proper VeiL jwt-token.'.format(val=value))
 
 
-class VeilSlugType(StringType):
-    """Descriptor for VeiL slug field."""
-
-    __SLUG_PREFIX = re.compile('^[-a-zA-Z0-9_]+$', re.I)
-
-    def __set__(self, instance, value):
-        """Check that attribute value type equals value_type and looks like veil slug pattern."""  # noqa: E501
-        if isinstance(value, self.value_type) and self.__SLUG_PREFIX.match(value) and len(value) <= 60:  # noqa: E501
-            instance.__dict__[self.name] = value
-        else:
-            raise TypeError('{val} is not a proper VeiL slug.'.format(val=value))
-
-
 class HexColorType(NullableStringType):
     """Descriptor for hex-color str checking."""
 
