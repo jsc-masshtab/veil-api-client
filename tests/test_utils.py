@@ -31,7 +31,6 @@ class TestAttributeDescriptors:
             veil_url_string_type = utils.VeilUrlStringType('veil_url_string_type')
             uuid_string_type = utils.UuidStringType('uuid_string_type')
             nullable_uuid_string_type = utils.NullableUuidStringType('nullable_uuid_string_type')  # noqa: E501
-            veil_slug_type = utils.VeilSlugType('veil_slug_type')
             hex_color_type = utils.HexColorType('hex_color_type')
             entity_configuration_type = utils.VeilEntityConfigurationType('entity_configuration_type')  # noqa: E501
 
@@ -172,12 +171,6 @@ class TestAttributeDescriptors:
         self.assert_value(class_argument='nullable_set_type',
                           good_value=None,
                           bad_value='1')
-
-    def test_veil_slug_type(self):
-        """Veil slug type descriptor test case."""
-        self.assert_value(class_argument='veil_slug_type',
-                          good_value='slug',
-                          bad_value='slug!')
 
     def test_hex_color_type(self):
         """Hex color type descriptor test case."""
