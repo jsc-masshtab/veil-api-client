@@ -355,7 +355,8 @@ class VeilTask(VeilApiObject):
     async def cancel(self) -> 'VeilApiResponse':
         """Exit tasks endpoint."""
         url = self.api_object_url + 'cancel/'
-        response = await self._put(url)
+        body = dict(force=True)
+        response = await self._put(url, json_data=body)
         return response
 
     async def jid(self) -> 'VeilApiResponse':
